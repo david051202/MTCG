@@ -10,25 +10,29 @@ namespace MTCG.Http
 {
     internal class HttpServer
     {
-        private readonly TcpListener _listener;
-        private bool listerning = false;
+        private TcpListener httpServer;
 
-        //Starts the server
-        public HttpServer(IPAddress address, int port) {
-            _listener = new TcpListener(address, port);
-            _listener.Start();
+        public HttpServer()
+        {
+            httpServer = new TcpListener(IPAddress.Loopback, 10001);
+            httpServer.Start();
         }
 
-        public void Start()
+        public void Run()
         {
-            _listener.Start();
-            listerning = true;
-
-            while (listerning)
+            while (true)
             {
-                var connection = _listener.AcceptTcpClient();                
+                TcpClient clientSocket = httpServer.AcceptTcpClient();
+                using var writer = new StreamWriter(clientSocket.GetStream()) { AutoFlush = true };
+                using var reader = new StreamReader(clientSocket.GetStream());
+
+                string? line;
+
+                line = reader.ReadLine();
+                if (line != null)
+                    Console.WriteLine(line);
+
             }
         }
-
     }
 }
