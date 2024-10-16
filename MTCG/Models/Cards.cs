@@ -1,12 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MTCG.Classes
+﻿namespace MTCG.Classes
 {
-    internal class Cards
+    public class Cards
     {
+        public string Name { get; set; }
+        public int Damage { get; set; }
+        public string ElementType { get; set; }
+        public bool IsSpellCard { get; set; }
+
+        public Cards(string name, int damage, string elementType, bool isSpellCard)
+        {
+            Name = name;
+            Damage = damage;
+            ElementType = elementType;
+            IsSpellCard = isSpellCard;
+        }
     }
 }

@@ -1,95 +1,84 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
+using System.IO;
+using System.Threading.Tasks;
+using MTCG.BusinessLogic;
 
 namespace MTCG.Http
 {
-    internal class HttpServer
+    public class HttpServer
     {
-        private readonly int _port;
-        private readonly StreamTracer _tracer;
+        private readonly TcpListener _listener;
+        private readonly UserHandler _userHandler;
 
-        public HttpServer(int port, StreamTracer tracer)
+        public HttpServer(int port)
         {
-            _port = port;
-            _tracer = tracer;
+            _listener = new TcpListener(IPAddress.Loopback, port);
+            _userHandler = new UserHandler();
         }
 
         public async Task Start()
         {
-            TcpListener listener = new TcpListener(IPAddress.Any, _port);
-            listener.Start();
-            _tracer.WriteLine($"HTTP Server started on port {_port}");
+            _listener.Start();
+            Console.WriteLine("Server started...");
 
             while (true)
             {
-                TcpClient client = await listener.AcceptTcpClientAsync();
-                _tracer.WriteLine("Accepted new client connection");
-
-                HandleClient(client);
+                var client = await _listener.AcceptTcpClientAsync();
+                _ = HandleClientAsync(client);
             }
         }
 
-        private async void HandleClient(TcpClient client)
+        private async Task HandleClientAsync(TcpClient client)
         {
-            using NetworkStream stream = client.GetStream();
-            using StreamReader reader = new StreamReader(stream, Encoding.UTF8);
-            using StreamWriter writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
+            using var stream = client.GetStream();
+            using var reader = new StreamReader(stream);
+            using var writer = new StreamWriter(stream) { AutoFlush = true };
 
-            try
+            var request = await HttpRequest.Parse(reader);
+            if (request == null)
             {
-                HttpRequest request = HttpRequest.Parse(reader);
-                _tracer.WriteLine($"Received request: {request.Method} {request.Path}");
-
-                HttpResponse response;
-
-                if (request.Method == "GET" && request.Path == "/")
-                {
-                    response = HandleGetRequest();
-                }
-                else if (request.Method == "POST" && request.Path == "/")
-                {
-                    response = HandlePostRequest(request);
-                }
-                else
-                {
-                    response = new HttpResponse("404 Not Found", "The resource could not be found.");
-                }
-
-                response.Send(writer);
-                _tracer.WriteLine($"Sent response: {response.StatusCode}");
+                Console.WriteLine("Received a bad request.");
+                await writer.WriteLineAsync(new HttpResponse("400 Bad Request", "{\"error\": \"Invalid request.\"}").ToString());
+                return;
             }
-            catch (Exception ex)
+
+            HttpResponse response;
+
+            Console.WriteLine($"Received request: Method = {request.Method}, Path = {request.Path}");
+
+            switch (request.Path)
             {
-                _tracer.WriteLine($"Error: {ex.Message}");
-                HttpResponse errorResponse = new HttpResponse("500 Internal Server Error", "An error occurred while processing your request.");
-                errorResponse.Send(writer);
+                case "/sessions":
+                    if (request.Method == "POST")
+                    {
+                        response = await _userHandler.LoginUser(request);
+                    }
+                    else
+                    {
+                        response = new HttpResponse("405 Method Not Allowed", "{\"error\": \"Only POST is allowed\"}");
+                    }
+                    break;
+
+                case "/users":
+                    if (request.Method == "POST")
+                    {
+                        response = await _userHandler.RegisterUser(request);
+                    }
+                    else
+                    {
+                        response = new HttpResponse("405 Method Not Allowed", "{\"error\": \"Only POST is allowed\"}");
+                    }
+                    break;
+
+                default:
+                    response = new HttpResponse("404 Not Found", "{\"error\": \"Resource not found\"}");
+                    break;
             }
 
-            client.Close();
-        }
-
-        private HttpResponse HandleGetRequest()
-        {
-            string responseBody = "<html><body><h1>Welcome to the MTCG Server</h1></body></html>";
-            HttpResponse response = new HttpResponse("200 OK", responseBody);
-            response.SetHeader("Content-Type", "text/html");
-            return response;
-        }
-
-        private HttpResponse HandlePostRequest(HttpRequest request)
-        {
-            _tracer.WriteLine($"POST body: {request.Body}");
-
-            // Simulate user registration (for example)
-            string responseBody = "{\"message\":\"User registered successfully\"}";
-            HttpResponse response = new HttpResponse("201 Created", responseBody);
-            response.SetHeader("Content-Type", "application/json");
-            return response;
+            await writer.WriteLineAsync(response.ToString());
+            Console.WriteLine(response.ToString());
         }
     }
 }

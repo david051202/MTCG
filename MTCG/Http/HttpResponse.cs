@@ -1,48 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 namespace MTCG.Http
 {
-    internal class HttpResponse
+    public class HttpResponse
     {
-        public string StatusCode { get; private set; }
-        public Dictionary<string, string> Headers { get; private set; }
-        public string Body { get; private set; }
+        public StatusCodes StatusCode { get; set; }
+        public string Body { get; set; }
 
-        public HttpResponse(string statusCode, string body = "")
+        public override string ToString()
         {
-            StatusCode = statusCode;
-            Headers = new Dictionary<string, string>
-            {
-                { "Content-Type", "text/plain" },
-                { "Content-Length", body.Length.ToString() }
-            };
-            Body = body;
+            var response = new StringBuilder();
+            response.AppendLine($"HTTP/1.1 {StatusCode}");
+            response.AppendLine("Content-Type: application/json; charset=UTF-8");
+            response.AppendLine($"Content-Length: {Encoding.UTF8.GetByteCount(Body)}");
+            response.AppendLine();
+            response.AppendLine(Body);
+            return response.ToString();
         }
+    }
 
-        public void SetHeader(string key, string value)
-        {
-            Headers[key] = value;
-        }
-
-        public void Send(StreamWriter writer)
-        {
-            // Write status line
-            writer.WriteLine($"HTTP/1.1 {StatusCode}");
-
-            // Write headers
-            foreach (var header in Headers)
-            {
-                writer.WriteLine($"{header.Key}: {header.Value}");
-            }
-
-            writer.WriteLine(); // End of headers
-
-            // Write body
-            writer.WriteLine(Body);
-        }
+    public enum StatusCodes
+    {
+        OK = 200,
+        Created = 201,
+        NoContent = 204,
+        BadRequest = 400,
+        Unauthorized = 401,
+        Forbidden = 403,
+        NotFound = 404,
+        MethodNotAllowed = 405,
+        Conflict = 409,
+        InternalServerError = 500
     }
 }
