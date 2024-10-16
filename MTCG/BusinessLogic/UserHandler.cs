@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MTCG.Classes
+namespace MTCG.BusinessLogic
 {
-    internal class User
+    internal class UserHandler
     {
-        
     }
 }

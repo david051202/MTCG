@@ -10,81 +10,86 @@ namespace MTCG.Http
 {
     internal class HttpServer
     {
-        private TcpListener httpServer;
+        private readonly int _port;
+        private readonly StreamTracer _tracer;
 
-        public HttpServer()
+        public HttpServer(int port, StreamTracer tracer)
         {
-            httpServer = new TcpListener(IPAddress.Loopback, 10001);
-            httpServer.Start();
+            _port = port;
+            _tracer = tracer;
         }
 
-        public void Run()
+        public async Task Start()
         {
+            TcpListener listener = new TcpListener(IPAddress.Any, _port);
+            listener.Start();
+            _tracer.WriteLine($"HTTP Server started on port {_port}");
+
             while (true)
             {
-                TcpClient clientSocket = httpServer.AcceptTcpClient();
-                using var writer = new StreamWriter(clientSocket.GetStream()) { AutoFlush = true };
-                using var reader = new StreamReader(clientSocket.GetStream());
+                TcpClient client = await listener.AcceptTcpClientAsync();
+                _tracer.WriteLine("Accepted new client connection");
 
-                string? line;
+                HandleClient(client);
+            }
+        }
 
-                line = reader.ReadLine();
-                if (line != null)
-                    Console.WriteLine(line);
+        private async void HandleClient(TcpClient client)
+        {
+            using NetworkStream stream = client.GetStream();
+            using StreamReader reader = new StreamReader(stream, Encoding.UTF8);
+            using StreamWriter writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
 
-                // 1.2 read the HTTP-headers (in HTTP after the first line, until the empy line)
-                int content_length = 0; // we need the content_length later, to be able to read the HTTP-content
-                while ((line = reader.ReadLine()) != null)
+            try
+            {
+                HttpRequest request = HttpRequest.Parse(reader);
+                _tracer.WriteLine($"Received request: {request.Method} {request.Path}");
+
+                HttpResponse response;
+
+                if (request.Method == "GET" && request.Path == "/")
                 {
-                    Console.WriteLine(line);
-                    if (line == "")
-                    {
-                        break;  // empty line indicates the end of the HTTP-headers
-                    }
-
-                    // Parse the header
-                    var parts = line.Split(':');
-                    if (parts.Length == 2 && parts[0] == "Content-Length")
-                    {
-                        content_length = int.Parse(parts[1].Trim());
-                    }
+                    response = HandleGetRequest();
+                }
+                else if (request.Method == "POST" && request.Path == "/")
+                {
+                    response = HandlePostRequest(request);
+                }
+                else
+                {
+                    response = new HttpResponse("404 Not Found", "The resource could not be found.");
                 }
 
-                // 1.3 read the body if existing
-                if (content_length > 0)
-                {
-                    var data = new StringBuilder(200);
-                    char[] chars = new char[1024];
-                    int bytesReadTotal = 0;
-                    while (bytesReadTotal < content_length)
-                    {
-                        var bytesRead = reader.Read(chars, 0, chars.Length);
-                        bytesReadTotal += bytesRead;
-                        if (bytesRead == 0)
-                            break;
-                        data.Append(chars, 0, bytesRead);
-                    }
-                    Console.WriteLine(data.ToString());
-                }
-
-                // ----- 2. Do the processing -----
-                
-
-                Console.WriteLine("----------------------------------------");
-
-                // ----- 3. Write the HTTP-Response -----
-                var writerAlsoToConsole = new StreamTracer(writer);  // we use a simple helper-class StreamTracer to write the HTTP-Response to the client and to the console
-
-                writerAlsoToConsole.WriteLine("HTTP/1.0 200 OK");    // first line in HTTP-Response contains the HTTP-Version and the status code
-                writerAlsoToConsole.WriteLine("Content-Type: text/html; charset=utf-8");     // the HTTP-headers (in HTTP after the first line, until the empy line)
-                writerAlsoToConsole.WriteLine();
-                writerAlsoToConsole.WriteLine("<html><body><h1>Hello World!</h1></body></html>");    // the HTTP-content (here we just return a minimalistic HTML Hello-World)
-
-                Console.WriteLine("========================================");
+                response.Send(writer);
+                _tracer.WriteLine($"Sent response: {response.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                _tracer.WriteLine($"Error: {ex.Message}");
+                HttpResponse errorResponse = new HttpResponse("500 Internal Server Error", "An error occurred while processing your request.");
+                errorResponse.Send(writer);
             }
 
-
+            client.Close();
         }
-    }
+
+        private HttpResponse HandleGetRequest()
+        {
+            string responseBody = "<html><body><h1>Welcome to the MTCG Server</h1></body></html>";
+            HttpResponse response = new HttpResponse("200 OK", responseBody);
+            response.SetHeader("Content-Type", "text/html");
+            return response;
+        }
+
+        private HttpResponse HandlePostRequest(HttpRequest request)
+        {
+            _tracer.WriteLine($"POST body: {request.Body}");
+
+            // Simulate user registration (for example)
+            string responseBody = "{\"message\":\"User registered successfully\"}";
+            HttpResponse response = new HttpResponse("201 Created", responseBody);
+            response.SetHeader("Content-Type", "application/json");
+            return response;
+        }
     }
 }
