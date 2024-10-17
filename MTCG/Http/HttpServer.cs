@@ -25,12 +25,15 @@ namespace MTCG.Http
             _listener.Start();
             listen = true;
             Console.WriteLine("[Server] Server started, waiting for connections...");
+            Console.WriteLine(new string('#', 50));
+
 
             Task.Run(async () =>
             {
                 while (listen)
                 {
                     var connection = await _listener.AcceptTcpClientAsync();
+                    Console.WriteLine("[Server] Client connected...");
                     _ = Task.Run(() => HandleClient(connection));
                 }
             }).GetAwaiter().GetResult();
@@ -38,90 +41,94 @@ namespace MTCG.Http
 
         public void HandleClient(TcpClient connection)
         {
-            Console.WriteLine("[Server] Handling client...");
-
             if (connection == null)
             {
                 Console.WriteLine("[Server] Error: Invalid client.");
                 return;
             }
 
-            using (connection)
+            try
             {
-                try
+                var client = new HttpClient(connection);
+                Console.WriteLine("[Server] Receiving request...");
+                var request = client.ReceiveRequest();
+
+                HttpResponse response = new HttpResponse();
+
+                if (request == null)
                 {
-                    var client = new HttpClient(connection);
-                    Console.WriteLine("[Server] Receiving request...");
-                    var request = client.ReceiveRequest();
-
-                    HttpResponse response = new HttpResponse();
-
-                    if (request == null)
+                    Console.WriteLine("[Server] Bad request received.");
+                    response.StatusCode = StatusCodes.BadRequest;
+                    response.Body = "Invalid request...";
+                }
+                else
+                {
+                    // Verarbeite die Anfrage basierend auf dem Pfad
+                    if (request.HttpMethod == HttpMethods.POST && request.Path == "/users")
                     {
-                        Console.WriteLine("[Server] Bad request received.");
-                        response = new HttpResponse
+                        User newUser = JsonConvert.DeserializeObject<User>(request.Body);
+                        if (newUser != null && newUser.CreateUser())
                         {
-                            StatusCode = StatusCodes.BadRequest,
-                            Body = "Invalid request..."
-                        };
+                            response.StatusCode = StatusCodes.Created; // 201 für erstellte Ressourcen
+                            response.Body = "User successfully created.";
+                        }
+                        else
+                        {
+                            response.StatusCode = StatusCodes.BadRequest;
+                            response.Body = "User already exists or an error occurred.";
+                        }
                     }
-                    else
+                    else if (request.HttpMethod == HttpMethods.POST && request.Path == "/sessions")
                     {
-                        Console.WriteLine("[Server] Valid request received.");
-                        if (request.HttpMethod == HttpMethods.POST && request.Path == "/users")
+                        User loginUser = JsonConvert.DeserializeObject<User>(request.Body);
+                        if (loginUser != null)
                         {
-                            User newUser = JsonConvert.DeserializeObject<User>(request.Body);
-                            if (newUser != null && newUser.CreateUser())
+                            User loggedInUser = User.Login(loginUser.Username, loginUser.Password);
+                            if (loggedInUser != null)
                             {
                                 response.StatusCode = StatusCodes.OK;
-                                response.Body = "User successfully created.";
+                                response.Body = $"Login successful. Token: {loggedInUser.Token}";
                             }
                             else
                             {
-                                response.StatusCode = StatusCodes.BadRequest;
-                                response.Body = "User already exists or an error occurred.";
-                            }
-                        }
-                        else if (request.HttpMethod == HttpMethods.POST && request.Path == "/sessions")
-                        {
-                            User loginUser = JsonConvert.DeserializeObject<User>(request.Body);
-                            if (loginUser != null)
-                            {
-                                User loggedInUser = User.Login(loginUser.Username, loginUser.Password);
-                                if (loggedInUser != null)
-                                {
-                                    response.StatusCode = StatusCodes.OK;
-                                    response.Body = $"Login successful. Token: {loggedInUser.Token}";
-                                }
-                                else
-                                {
-                                    response.StatusCode = StatusCodes.Unauthorized;
-                                    response.Body = "Invalid username or password.";
-                                }
-                            }
-                            else
-                            {
-                                response.StatusCode = StatusCodes.BadRequest;
-                                response.Body = "Invalid login data.";
+                                response.StatusCode = StatusCodes.Unauthorized;
+                                response.Body = "Invalid username or password.";
                             }
                         }
                         else
                         {
-                            response.StatusCode = StatusCodes.NotFound;
-                            response.Body = "Endpoint not found.";
+                            response.StatusCode = StatusCodes.BadRequest;
+                            response.Body = "Invalid login data.";
                         }
                     }
+                    else
+                    {
+                        response.StatusCode = StatusCodes.NotFound;
+                        response.Body = "Endpoint not found.";
+                    }
+                }
 
-                    Console.WriteLine("[Server] Sending response...");
-                    client.SendResponse(response);
-                    Console.WriteLine("[Server] Response sent.");
-                }
-                catch (Exception ex)
+                // Sicherstellen, dass der Statuscode gültig ist
+                if (response.StatusCode == 0)
                 {
-                    Console.WriteLine($"[Server] Error while handling client: {ex.Message}");
+                    response.StatusCode = StatusCodes.InternalServerError; // Setze Standard-Statuscode
                 }
+
+                Console.WriteLine("[Server] Sending response...");
+                client.SendResponse(response);
+                Console.WriteLine("[Server] Response sent.");
+                Console.WriteLine(new string('-', 50));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Server] Error while handling client: {ex.Message}");
+            }
+            finally
+            {
+                connection.Close(); // Schließe die Verbindung im finally-Block
             }
         }
+
 
         public void Stop()
         {

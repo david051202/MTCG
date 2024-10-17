@@ -16,13 +16,10 @@ namespace MTCG.Http
         public HttpClient(TcpClient connection)
         {
             this.connection = connection;
-            Console.WriteLine("[Client] Client initialized.");
         }
 
         public RequestContext ReceiveRequest()
         {
-            Console.WriteLine("[Client] Receiving request...");
-
             try
             {
                 var stream = connection.GetStream();
@@ -33,7 +30,7 @@ namespace MTCG.Http
 
                     if (string.IsNullOrEmpty(firstLine))
                     {
-                        Console.WriteLine("[Client] Empty or invalid request received.");
+                        Console.WriteLine("[Client] Invalid request");
                         return null;
                     }
 
@@ -41,7 +38,7 @@ namespace MTCG.Http
 
                     if (parts.Length != 3)
                     {
-                        Console.WriteLine("[Client] Malformed request line.");
+                        Console.WriteLine("[Client] Malformed request");
                         return null;
                     }
 
@@ -49,7 +46,7 @@ namespace MTCG.Http
                     request.Path = parts[1];
                     request.HttpVersion = parts[2];
 
-                    Console.WriteLine($"[Client] Request Line: {parts[0]} {parts[1]} {parts[2]}");
+                    Console.WriteLine($"[Client] {parts[0]} {parts[1]} {parts[2]}");
 
                     string line;
                     int contentLength = 0;
@@ -61,16 +58,11 @@ namespace MTCG.Http
                         if (headerParts.Length == 2)
                         {
                             request.Headers.Add(headerParts[0], headerParts[1]);
-                            Console.WriteLine($"[Client] Header: {headerParts[0]}: {headerParts[1]}");
 
                             if (headerParts[0].Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
                             {
                                 contentLength = int.Parse(headerParts[1]);
                             }
-                        }
-                        else
-                        {
-                            Console.WriteLine("[Client] Malformed header detected.");
                         }
                     }
 
@@ -82,7 +74,7 @@ namespace MTCG.Http
                             char[] buffer = new char[contentLength];
                             reader.Read(buffer, 0, contentLength);
                             request.Body = new string(buffer);
-                            Console.WriteLine($"[Client] Body received: {request.Body}");
+                            Console.WriteLine($"[Client] Body: {request.Body}");
                         }
                     }
 
@@ -91,57 +83,70 @@ namespace MTCG.Http
             }
             catch (Exception e)
             {
-                Console.WriteLine($"[Client] Error while receiving request: {e.Message}");
+                Console.WriteLine($"[Client] Error: {e.Message}");
                 return null;
             }
         }
 
         public void SendResponse(HttpResponse response)
         {
-            Console.WriteLine("[Client] Sending response...");
-
             try
             {
+                if (!connection.Connected)
+                {
+                    Console.WriteLine("[Client] Error: Socket is not connected.");
+                    return;
+                }
+
                 var stream = connection.GetStream();
                 using (var writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true })
                 {
-                    writer.Write($"HTTP/1.1 {(int)response.StatusCode} {response.StatusCode}\r\n");
-                    Console.WriteLine($"[Client] Response Status: HTTP/1.1 {(int)response.StatusCode} {response.StatusCode}");
+                    if (response.StatusCode == 0) 
+                    {
+                        response.StatusCode = StatusCodes.InternalServerError; 
+                    }
 
+                    // Schreibe die Statuszeile
+                    writer.Write($"HTTP/1.1 {(int)response.StatusCode} {response.StatusCode}\r\n");
+                    Console.WriteLine($"[Client] Status: {(int)response.StatusCode} {response.StatusCode}");
+
+                    // Schreibe die Header und den Body
                     if (!string.IsNullOrEmpty(response.Body))
                     {
                         var payload = Encoding.UTF8.GetBytes(response.Body);
                         writer.Write($"Content-Length: {payload.Length}\r\n");
                         writer.Write("\r\n");
                         writer.Write(response.Body);
-                        Console.WriteLine($"[Client] Response Body: {response.Body}");
+                        Console.WriteLine("[Client] Body sent");
                     }
                     else
                     {
                         writer.Write("\r\n");
-                        Console.WriteLine("[Client] Empty response body.");
+                        Console.WriteLine("[Client] No body");
                     }
 
-                    Console.WriteLine("[Client] Response sent successfully.");
+                    writer.Flush();
+                    Console.WriteLine("[Client] Response sent");
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine($"[Client] Error while sending response: {e.Message}");
+                Console.WriteLine($"[Client] Error: {e.Message}");
             }
         }
 
+
+
         public void Close()
         {
-            Console.WriteLine("[Client] Closing connection.");
             try
             {
                 connection.Close();
-                Console.WriteLine("[Client] Connection closed successfully.");
+                Console.WriteLine("[Client] Closed");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"[Client] Error while closing connection: {e.Message}");
+                Console.WriteLine($"[Client] Error: {e.Message}");
             }
         }
     }
