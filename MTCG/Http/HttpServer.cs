@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using MTCG.Classes;
@@ -20,26 +19,22 @@ namespace MTCG.Http
             Console.WriteLine($"[Server] Server initialized on port {port}");
         }
 
-        public void Start()
+        public async Task StartAsync()
         {
             _listener.Start();
             listen = true;
             Console.WriteLine("[Server] Server started, waiting for connections...");
             Console.WriteLine(new string('#', 50));
 
-
-            Task.Run(async () =>
+            while (listen)
             {
-                while (listen)
-                {
-                    var connection = await _listener.AcceptTcpClientAsync();
-                    Console.WriteLine("[Server] Client connected...");
-                    _ = Task.Run(() => HandleClient(connection));
-                }
-            }).GetAwaiter().GetResult();
+                var connection = await _listener.AcceptTcpClientAsync();
+                Console.WriteLine("[Server] Client connected...");
+                _ = HandleClientAsync(connection);
+            }
         }
 
-        public void HandleClient(TcpClient connection)
+        public async Task HandleClientAsync(TcpClient connection)
         {
             if (connection == null)
             {
@@ -51,7 +46,7 @@ namespace MTCG.Http
             {
                 var client = new HttpClient(connection);
                 Console.WriteLine("[Server] Receiving request...");
-                var request = client.ReceiveRequest();
+                var request = await client.ReceiveRequestAsync();
 
                 HttpResponse response = new HttpResponse();
 
@@ -108,14 +103,13 @@ namespace MTCG.Http
                     }
                 }
 
-                // Sicherstellen, dass der Statuscode gültig ist
                 if (response.StatusCode == 0)
                 {
-                    response.StatusCode = StatusCodes.InternalServerError; // Setze Standard-Statuscode
+                    response.StatusCode = StatusCodes.InternalServerError;
                 }
 
                 Console.WriteLine("[Server] Sending response...");
-                client.SendResponse(response);
+                await client.SendResponseAsync(response);
                 Console.WriteLine("[Server] Response sent.");
                 Console.WriteLine(new string('-', 50));
             }
@@ -126,9 +120,9 @@ namespace MTCG.Http
             finally
             {
                 connection.Close(); // Schließe die Verbindung im finally-Block
+                Console.WriteLine("[Server] Connection closed.");
             }
         }
-
 
         public void Stop()
         {

@@ -18,15 +18,15 @@ namespace MTCG.Http
             this.connection = connection;
         }
 
-        public RequestContext ReceiveRequest()
+        public async Task<RequestContext> ReceiveRequestAsync()
         {
             try
             {
                 var stream = connection.GetStream();
-                using (var reader = new StreamReader(stream, Encoding.UTF8))
+                using (var reader = new StreamReader(stream, Encoding.UTF8, leaveOpen: true))
                 {
                     var request = new RequestContext();
-                    var firstLine = reader.ReadLine();
+                    var firstLine = await reader.ReadLineAsync();
 
                     if (string.IsNullOrEmpty(firstLine))
                     {
@@ -52,7 +52,7 @@ namespace MTCG.Http
                     int contentLength = 0;
 
                     // Headers einlesen
-                    while (!string.IsNullOrEmpty(line = reader.ReadLine()))
+                    while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync()))
                     {
                         var headerParts = line.Split(new[] { ": " }, 2, StringSplitOptions.None);
                         if (headerParts.Length == 2)
@@ -67,15 +67,12 @@ namespace MTCG.Http
                     }
 
                     // Request Body einlesen, falls vorhanden
-                    if (request.HttpMethod == HttpMethods.POST || request.HttpMethod == HttpMethods.PUT)
+                    if ((request.HttpMethod == HttpMethods.POST || request.HttpMethod == HttpMethods.PUT) && contentLength > 0)
                     {
-                        if (contentLength > 0)
-                        {
-                            char[] buffer = new char[contentLength];
-                            reader.Read(buffer, 0, contentLength);
-                            request.Body = new string(buffer);
-                            Console.WriteLine($"[Client] Body: {request.Body}");
-                        }
+                        char[] buffer = new char[contentLength];
+                        await reader.ReadAsync(buffer, 0, contentLength);
+                        request.Body = new string(buffer);
+                        Console.WriteLine($"[Client] Body: {request.Body}");
                     }
 
                     return request;
@@ -88,7 +85,7 @@ namespace MTCG.Http
             }
         }
 
-        public void SendResponse(HttpResponse response)
+        public async Task SendResponseAsync(HttpResponse response)
         {
             try
             {
@@ -99,33 +96,33 @@ namespace MTCG.Http
                 }
 
                 var stream = connection.GetStream();
-                using (var writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true })
+                using (var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true))
                 {
-                    if (response.StatusCode == 0) 
+                    if (response.StatusCode == 0)
                     {
-                        response.StatusCode = StatusCodes.InternalServerError; 
+                        response.StatusCode = StatusCodes.InternalServerError;
                     }
 
                     // Schreibe die Statuszeile
-                    writer.Write($"HTTP/1.1 {(int)response.StatusCode} {response.StatusCode}\r\n");
+                    await writer.WriteAsync($"HTTP/1.1 {(int)response.StatusCode} {response.StatusCode}\r\n");
                     Console.WriteLine($"[Client] Status: {(int)response.StatusCode} {response.StatusCode}");
 
                     // Schreibe die Header und den Body
                     if (!string.IsNullOrEmpty(response.Body))
                     {
                         var payload = Encoding.UTF8.GetBytes(response.Body);
-                        writer.Write($"Content-Length: {payload.Length}\r\n");
-                        writer.Write("\r\n");
-                        writer.Write(response.Body);
+                        await writer.WriteAsync($"Content-Length: {payload.Length}\r\n");
+                        await writer.WriteAsync("\r\n");
+                        await writer.WriteAsync(response.Body);
                         Console.WriteLine("[Client] Body sent");
                     }
                     else
                     {
-                        writer.Write("\r\n");
+                        await writer.WriteAsync("\r\n");
                         Console.WriteLine("[Client] No body");
                     }
 
-                    writer.Flush();
+                    await writer.FlushAsync();
                     Console.WriteLine("[Client] Response sent");
                 }
             }
@@ -134,8 +131,6 @@ namespace MTCG.Http
                 Console.WriteLine($"[Client] Error: {e.Message}");
             }
         }
-
-
 
         public void Close()
         {
