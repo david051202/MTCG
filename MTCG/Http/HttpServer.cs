@@ -2,83 +2,132 @@
 using System.Net;
 using System.Net.Sockets;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
-using MTCG.BusinessLogic;
+using MTCG.Classes;
+using Newtonsoft.Json;
 
 namespace MTCG.Http
 {
     public class HttpServer
     {
         private readonly TcpListener _listener;
-        private readonly UserHandler _userHandler;
+        private bool listen;
 
         public HttpServer(int port)
         {
             _listener = new TcpListener(IPAddress.Loopback, port);
-            _userHandler = new UserHandler();
+            Console.WriteLine($"[Server] Server initialized on port {port}");
         }
 
-        public async Task Start()
+        public void Start()
         {
             _listener.Start();
-            Console.WriteLine("Server started...");
+            listen = true;
+            Console.WriteLine("[Server] Server started, waiting for connections...");
 
-            while (true)
+            Task.Run(async () =>
             {
-                var client = await _listener.AcceptTcpClientAsync();
-                _ = HandleClientAsync(client);
-            }
+                while (listen)
+                {
+                    var connection = await _listener.AcceptTcpClientAsync();
+                    _ = Task.Run(() => HandleClient(connection));
+                }
+            }).GetAwaiter().GetResult();
         }
 
-        private async Task HandleClientAsync(TcpClient client)
+        public void HandleClient(TcpClient connection)
         {
-            using var stream = client.GetStream();
-            using var reader = new StreamReader(stream);
-            using var writer = new StreamWriter(stream) { AutoFlush = true };
+            Console.WriteLine("[Server] Handling client...");
 
-            var request = await HttpRequest.Parse(reader);
-            if (request == null)
+            if (connection == null)
             {
-                Console.WriteLine("Received a bad request.");
-                await writer.WriteLineAsync(new HttpResponse("400 Bad Request", "{\"error\": \"Invalid request.\"}").ToString());
+                Console.WriteLine("[Server] Error: Invalid client.");
                 return;
             }
 
-            HttpResponse response;
-
-            Console.WriteLine($"Received request: Method = {request.Method}, Path = {request.Path}");
-
-            switch (request.Path)
+            using (connection)
             {
-                case "/sessions":
-                    if (request.Method == "POST")
+                try
+                {
+                    var client = new HttpClient(connection);
+                    Console.WriteLine("[Server] Receiving request...");
+                    var request = client.ReceiveRequest();
+
+                    HttpResponse response = new HttpResponse();
+
+                    if (request == null)
                     {
-                        response = await _userHandler.LoginUser(request);
+                        Console.WriteLine("[Server] Bad request received.");
+                        response = new HttpResponse
+                        {
+                            StatusCode = StatusCodes.BadRequest,
+                            Body = "Invalid request..."
+                        };
                     }
                     else
                     {
-                        response = new HttpResponse("405 Method Not Allowed", "{\"error\": \"Only POST is allowed\"}");
+                        Console.WriteLine("[Server] Valid request received.");
+                        if (request.HttpMethod == HttpMethods.POST && request.Path == "/users")
+                        {
+                            User newUser = JsonConvert.DeserializeObject<User>(request.Body);
+                            if (newUser != null && newUser.CreateUser())
+                            {
+                                response.StatusCode = StatusCodes.OK;
+                                response.Body = "User successfully created.";
+                            }
+                            else
+                            {
+                                response.StatusCode = StatusCodes.BadRequest;
+                                response.Body = "User already exists or an error occurred.";
+                            }
+                        }
+                        else if (request.HttpMethod == HttpMethods.POST && request.Path == "/sessions")
+                        {
+                            User loginUser = JsonConvert.DeserializeObject<User>(request.Body);
+                            if (loginUser != null)
+                            {
+                                User loggedInUser = User.Login(loginUser.Username, loginUser.Password);
+                                if (loggedInUser != null)
+                                {
+                                    response.StatusCode = StatusCodes.OK;
+                                    response.Body = $"Login successful. Token: {loggedInUser.Token}";
+                                }
+                                else
+                                {
+                                    response.StatusCode = StatusCodes.Unauthorized;
+                                    response.Body = "Invalid username or password.";
+                                }
+                            }
+                            else
+                            {
+                                response.StatusCode = StatusCodes.BadRequest;
+                                response.Body = "Invalid login data.";
+                            }
+                        }
+                        else
+                        {
+                            response.StatusCode = StatusCodes.NotFound;
+                            response.Body = "Endpoint not found.";
+                        }
                     }
-                    break;
 
-                case "/users":
-                    if (request.Method == "POST")
-                    {
-                        response = await _userHandler.RegisterUser(request);
-                    }
-                    else
-                    {
-                        response = new HttpResponse("405 Method Not Allowed", "{\"error\": \"Only POST is allowed\"}");
-                    }
-                    break;
-
-                default:
-                    response = new HttpResponse("404 Not Found", "{\"error\": \"Resource not found\"}");
-                    break;
+                    Console.WriteLine("[Server] Sending response...");
+                    client.SendResponse(response);
+                    Console.WriteLine("[Server] Response sent.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Server] Error while handling client: {ex.Message}");
+                }
             }
+        }
 
-            await writer.WriteLineAsync(response.ToString());
-            Console.WriteLine(response.ToString());
+        public void Stop()
+        {
+            listen = false;
+            _listener.Stop();
+            Console.WriteLine("[Server] Server stopped.");
         }
     }
 }
