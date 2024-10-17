@@ -13,6 +13,14 @@ namespace MTCG.Classes
         public int Elo { get; set; }
         public int Coins { get; set; }
 
+        public Http.HttpServer HttpServer
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
         // Temporäre Speicherung der Benutzer in einer In-Memory-Liste
         private static List<User> users = new List<User>();
 

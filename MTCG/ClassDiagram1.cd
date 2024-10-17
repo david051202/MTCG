@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="MTCG.Http.HttpClient">
+    <Position X="20.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAABAAAAAAgAABAAAAAAgACAAAA=</HashCode>
+      <FileName>Http\HttpClient.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="HttpServer" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Http.HttpMethod">
+    <Position X="20.5" Y="4.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAgAAAAAA=</HashCode>
+      <FileName>Http\HttpMethod.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="HttpServer" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Http.HttpResponse">
+    <Position X="18.25" Y="4.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAEAAABAAAACAAAAAAAIAAAAAAAAAA=</HashCode>
+      <FileName>Http\HttpResponse.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="HttpClient" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Http.HttpServer">
+    <Position X="23" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAQAACAAAAAAAAAAAAAAAAAAAAIQAAQAAAAAA=</HashCode>
+      <FileName>Http\HttpServer.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MTCG.Http.RequestContext">
+    <Position X="17.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAIAAIABAAAACAAAAAAAAAAAAAQBAAA=</HashCode>
+      <FileName>Http\RequestContext.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="HttpClient" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Classes.Cards">
+    <Position X="25.75" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABBACAAAAAAAAAAAAAAAQAAAAAAAAEAAAAAAAAAAA=</HashCode>
+      <FileName>Models\Cards.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="User" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Classes.User">
+    <Position X="25.75" Y="4.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAAAAAAAQAQwAAAAQAACAAIAAAAAAACAAAYgAABAAA=</HashCode>
+      <FileName>Models\User.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="HttpServer" />
+    </ShowAsAssociation>
+  </Class>
+  <Enum Name="MTCG.Http.HttpMethods">
+    <Position X="20.5" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAIAAAAAAAEAQAAAAAAAAAAAAAgAAAAAEAAAAAAAAA=</HashCode>
+      <FileName>Http\HttpMethod.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="MTCG.Http.StatusCodes">
+    <Position X="18.25" Y="6.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CAEAAAAIAAAAAAAgAAEAAAAAAAEAAAQAACAhAAAAAAA=</HashCode>
+      <FileName>Http\HttpResponse.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

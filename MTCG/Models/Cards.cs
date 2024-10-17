@@ -7,6 +7,14 @@
         public string ElementType { get; set; }
         public bool IsSpellCard { get; set; }
 
+        public User User
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
         public Cards(string name, int damage, string elementType, bool isSpellCard)
         {
             Name = name;
