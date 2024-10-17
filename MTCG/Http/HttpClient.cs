@@ -30,7 +30,7 @@ namespace MTCG.Http
 
                     if (string.IsNullOrEmpty(firstLine))
                     {
-                        Console.WriteLine("[Client] Invalid request");
+                        Console.WriteLine("[Client] Invalid request: No first line.");
                         return null;
                     }
 
@@ -38,7 +38,7 @@ namespace MTCG.Http
 
                     if (parts.Length != 3)
                     {
-                        Console.WriteLine("[Client] Malformed request");
+                        Console.WriteLine("[Client] Malformed request: Incorrect number of parts.");
                         return null;
                     }
 
@@ -61,7 +61,14 @@ namespace MTCG.Http
 
                             if (headerParts[0].Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
                             {
-                                contentLength = int.Parse(headerParts[1]);
+                                if (int.TryParse(headerParts[1], out contentLength))
+                                {
+                                    // erfolgreich geparst
+                                }
+                                else
+                                {
+                                    Console.WriteLine("[Client] Invalid Content-Length header.");
+                                }
                             }
                         }
                     }
@@ -78,12 +85,23 @@ namespace MTCG.Http
                     return request;
                 }
             }
+            catch (FormatException ex)
+            {
+                Console.WriteLine($"[Client] Format error: {ex.Message}");
+                return null;
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine($"[Client] IO error: {ex.Message}");
+                return null;
+            }
             catch (Exception e)
             {
                 Console.WriteLine($"[Client] Error: {e.Message}");
                 return null;
             }
         }
+
 
         public async Task SendResponseAsync(HttpResponse response)
         {
@@ -114,16 +132,13 @@ namespace MTCG.Http
                         await writer.WriteAsync($"Content-Length: {payload.Length}\r\n");
                         await writer.WriteAsync("\r\n");
                         await writer.WriteAsync(response.Body);
-                        Console.WriteLine("[Client] Body sent");
                     }
                     else
                     {
                         await writer.WriteAsync("\r\n");
-                        Console.WriteLine("[Client] No body");
                     }
 
                     await writer.FlushAsync();
-                    Console.WriteLine("[Client] Response sent");
                 }
             }
             catch (Exception e)

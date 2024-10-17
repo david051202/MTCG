@@ -29,7 +29,6 @@ namespace MTCG.Http
             while (listen)
             {
                 var connection = await _listener.AcceptTcpClientAsync();
-                Console.WriteLine("[Server] Client connected...");
                 _ = HandleClientAsync(connection);
             }
         }
@@ -45,7 +44,6 @@ namespace MTCG.Http
             try
             {
                 var client = new HttpClient(connection);
-                Console.WriteLine("[Server] Receiving request...");
                 var request = await client.ReceiveRequestAsync();
 
                 HttpResponse response = new HttpResponse();
@@ -66,6 +64,7 @@ namespace MTCG.Http
                         {
                             response.StatusCode = StatusCodes.Created; // 201 für erstellte Ressourcen
                             response.Body = "User successfully created.";
+ 
                         }
                         else
                         {
@@ -82,7 +81,7 @@ namespace MTCG.Http
                             if (loggedInUser != null)
                             {
                                 response.StatusCode = StatusCodes.OK;
-                                response.Body = $"Login successful. Token: {loggedInUser.Token}";
+                                response.Body = $"Login successful. Token: {loggedInUser.Token}"; // Token wird an den Client gesendet
                             }
                             else
                             {
@@ -96,6 +95,7 @@ namespace MTCG.Http
                             response.Body = "Invalid login data.";
                         }
                     }
+
                     else
                     {
                         response.StatusCode = StatusCodes.NotFound;
@@ -108,19 +108,12 @@ namespace MTCG.Http
                     response.StatusCode = StatusCodes.InternalServerError;
                 }
 
-                Console.WriteLine("[Server] Sending response...");
                 await client.SendResponseAsync(response);
-                Console.WriteLine("[Server] Response sent.");
                 Console.WriteLine(new string('-', 50));
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Server] Error while handling client: {ex.Message}");
-            }
-            finally
-            {
-                connection.Close(); // Schließe die Verbindung im finally-Block
-                Console.WriteLine("[Server] Connection closed.");
             }
         }
 

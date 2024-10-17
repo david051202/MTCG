@@ -20,28 +20,29 @@ namespace MTCG.Classes
         {
             Username = username;
             Password = password;
-            Token = Guid.NewGuid().ToString();
+            Token = null;  // Token wird erst beim Login erstellt
             Cards = new List<Cards>();
             Elo = 100;
             Coins = 20;
         }
 
-        // Methode zum Erstellen eines neuen Benutzers
         public bool CreateUser()
         {
             try
             {
                 if (IsUserInMemory())
                 {
+                    Console.ForegroundColor = ConsoleColor.DarkRed;
                     Console.WriteLine("User already exists.");
+                    Console.ResetColor();
                     return false;
                 }
 
-
-
                 users.Add(this);
 
+                Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("User successfully created.");
+                Console.ResetColor();
                 return true;
             }
             catch (Exception ex)
@@ -58,19 +59,34 @@ namespace MTCG.Classes
             return users.Exists(u => u.Username.Equals(this.Username, StringComparison.OrdinalIgnoreCase));
         }
 
+        // Login-Methode, die einen Token generiert und zurückgibt, falls der Login erfolgreich ist
         public static User Login(string username, string password)
         {
             var user = users.Find(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && u.Password == password);
             if (user != null)
             {
-                Console.WriteLine("Login successful.");
+                // Generiere Token nur bei erfolgreichem Login
+                user.Token = Guid.NewGuid().ToString();
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Login successful. Token generated: " + user.Token);
+                Console.ResetColor();
+
                 return user;
             }
             else
             {
+                Console.ForegroundColor = ConsoleColor.DarkRed;
                 Console.WriteLine("Invalid username or password.");
+                Console.ResetColor();
                 return null;
             }
+        }
+
+        // Methode zum Abrufen eines Benutzers anhand seines Tokens
+        public static User GetUserByToken(string token)
+        {
+            return users.Find(u => u.Token == token);
         }
     }
 }

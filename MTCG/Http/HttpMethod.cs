@@ -10,14 +10,34 @@ namespace MTCG.Http
     {
         public static HttpMethods GetHttpMethod(string method)
         {
-            return method.ToLowerInvariant() switch
+            if (string.IsNullOrWhiteSpace(method))
             {
-                "get" => HttpMethods.GET,
-                "post" => HttpMethods.POST,
-                "put" => HttpMethods.PUT,
-                "delete" => HttpMethods.DELETE,
-                "patch" => HttpMethods.PATCH
-            };
+                throw new ArgumentException("HTTP method cannot be null or empty.");
+            }
+
+            // Konvertiere die Methode in Kleinbuchstaben, um Vergleichsprobleme zu vermeiden
+            method = method.ToLowerInvariant();
+
+            switch (method)
+            {
+                case "get":
+                    return HttpMethods.GET;
+
+                case "post":
+                    return HttpMethods.POST;
+
+                case "put":
+                    return HttpMethods.PUT;
+
+                case "delete":
+                    return HttpMethods.DELETE;
+
+                case "patch":
+                    return HttpMethods.PATCH;
+
+                default:
+                    throw new NotSupportedException($"HTTP method '{method}' is not supported.");
+            }
         }
     }
 
