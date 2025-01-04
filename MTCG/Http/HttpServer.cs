@@ -12,10 +12,12 @@ namespace MTCG.Http
     {
         private readonly TcpListener _listener;
         private bool listen;
+        private readonly List<Route> _routes;
 
         public HttpServer(int port)
         {
             _listener = new TcpListener(IPAddress.Loopback, port);
+            _routes = Route.GetRoutes();
             Console.WriteLine($"[Server] Server initialized on port {port}");
         }
 
@@ -56,45 +58,11 @@ namespace MTCG.Http
                 }
                 else
                 {
-                    if (request.HttpMethod == HttpMethods.POST && request.Path == "/users")
+                    var route = _routes.FirstOrDefault(r => r.HttpMethod == request.HttpMethod.ToString() && r.Path == request.Path);
+                    if (route != null)
                     {
-                        User newUser = JsonConvert.DeserializeObject<User>(request.Body);
-                        if (newUser != null && newUser.CreateUser())
-                        {
-                            response.StatusCode = StatusCodes.Created; // 201 für erstellte Ressourcen
-                            response.Body = "User successfully created.";
- 
-                        }
-                        else
-                        {
-                            response.StatusCode = StatusCodes.BadRequest;
-                            response.Body = "User already exists or an error occurred.";
-                        }
+                        response = route.Action(request);
                     }
-                    else if (request.HttpMethod == HttpMethods.POST && request.Path == "/sessions")
-                    {
-                        User loginUser = JsonConvert.DeserializeObject<User>(request.Body);
-                        if (loginUser != null)
-                        {
-                            User loggedInUser = User.Login(loginUser.Username, loginUser.Password);
-                            if (loggedInUser != null)
-                            {
-                                response.StatusCode = StatusCodes.Ok;
-                                response.Body = $"Login successful. Token: {loggedInUser.Token}"; // Token wird an den Client gesendet
-                            }
-                            else
-                            {
-                                response.StatusCode = StatusCodes.Unauthorized;
-                                response.Body = "Invalid username or password.";
-                            }
-                        }
-                        else
-                        {
-                            response.StatusCode = StatusCodes.BadRequest;
-                            response.Body = "Invalid login data.";
-                        }
-                    }
-
                     else
                     {
                         response.StatusCode = StatusCodes.NotFound;
