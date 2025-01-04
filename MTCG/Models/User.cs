@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Npgsql;
 
 namespace MTCG.Classes
 {
@@ -9,27 +10,16 @@ namespace MTCG.Classes
         public string Username { get; set; }
         public string Password { get; set; }
         public string Token { get; set; }
-        public List<Cards> Cards { get; set; }
         public int Elo { get; set; }
         public int Coins { get; set; }
 
-        public Http.HttpServer HttpServer
-        {
-            get => default;
-            set
-            {
-            }
-        }
-
-        // Temporäre Speicherung der Benutzer in einer In-Memory-Liste
-        private static List<User> users = new List<User>();
+        private static string connectionString = "Host=localhost;Username=postgres;Password=postgres;Database=mtcgdb";
 
         public User(string username, string password)
         {
             Username = username;
             Password = password;
             Token = null;  // Token wird erst beim Login erstellt
-            Cards = new List<Cards>();
             Elo = 100;
             Coins = 20;
         }
@@ -38,20 +28,34 @@ namespace MTCG.Classes
         {
             try
             {
-                if (IsUserInMemory())
+                using (var conn = new NpgsqlConnection(connectionString))
                 {
-                    Console.ForegroundColor = ConsoleColor.DarkRed;
-                    Console.WriteLine("User already exists.");
+                    conn.Open();
+
+                    if (IsUserInDatabase(conn))
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkRed;
+                        Console.WriteLine("User already exists.");
+                        Console.ResetColor();
+                        return false;
+                    }
+
+                    // Generiere Token
+                    Token = Guid.NewGuid().ToString();
+
+                    var cmd = new NpgsqlCommand("INSERT INTO users (username, password, coins, token) VALUES (@username, @password, @coins, @token::uuid)", conn);
+                    cmd.Parameters.AddWithValue("username", Username);
+                    cmd.Parameters.AddWithValue("password", Password);
+                    cmd.Parameters.AddWithValue("coins", Coins);
+                    cmd.Parameters.AddWithValue("token", Token);
+
+                    cmd.ExecuteNonQuery();
+
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("User successfully created.");
                     Console.ResetColor();
-                    return false;
+                    return true;
                 }
-
-                users.Add(this);
-
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("User successfully created.");
-                Console.ResetColor();
-                return true;
             }
             catch (Exception ex)
             {
@@ -61,40 +65,107 @@ namespace MTCG.Classes
             return false;
         }
 
-        // Methode zum Überprüfen, ob der Benutzer bereits in der In-Memory-Liste existiert
-        private bool IsUserInMemory()
+
+        private bool IsUserInDatabase(NpgsqlConnection conn)
         {
-            return users.Exists(u => u.Username.Equals(this.Username, StringComparison.OrdinalIgnoreCase));
+            var cmd = new NpgsqlCommand("SELECT COUNT(*) FROM users WHERE username = @username", conn);
+            cmd.Parameters.AddWithValue("username", Username);
+
+            var count = (long)cmd.ExecuteScalar();
+            return count > 0;
         }
 
-        // Login-Methode, die einen Token generiert und zurückgibt, falls der Login erfolgreich ist
         public static User Login(string username, string password)
         {
-            var user = users.Find(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && u.Password == password);
-            if (user != null)
+            try
             {
-                // Generiere Token nur bei erfolgreichem Login
-                user.Token = Guid.NewGuid().ToString();
+                using (var conn = new NpgsqlConnection(connectionString))
+                {
+                    conn.Open();
 
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Login successful. Token generated: " + user.Token);
-                Console.ResetColor();
+                    var cmd = new NpgsqlCommand("SELECT * FROM users WHERE username = @username AND password = @password", conn);
+                    cmd.Parameters.AddWithValue("username", username);
+                    cmd.Parameters.AddWithValue("password", password);
 
-                return user;
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            var user = new User(username, password)
+                            {
+                                ID = reader["user_id"].ToString(),
+                                Token = reader["token"].ToString(),
+                                Coins = (int)reader["coins"]
+                            };
+
+                            user.Token = Guid.NewGuid().ToString();
+
+                            reader.Close(); // Schließe den Reader, bevor ein neuer Befehl ausgeführt wird
+
+                            var updateCmd = new NpgsqlCommand("UPDATE users SET token = @token::uuid WHERE user_id = @user_id", conn);
+                            updateCmd.Parameters.AddWithValue("token", user.Token);
+                            updateCmd.Parameters.AddWithValue("user_id", int.Parse(user.ID));
+                            updateCmd.ExecuteNonQuery();
+
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine("Login successful. Token generated: " + user.Token);
+                            Console.ResetColor();
+
+                            return user;
+                        }
+                        else
+                        {
+                            Console.ForegroundColor = ConsoleColor.DarkRed;
+                            Console.WriteLine("Invalid username or password.");
+                            Console.ResetColor();
+                            return null;
+                        }
+                    }
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.DarkRed;
-                Console.WriteLine("Invalid username or password.");
-                Console.ResetColor();
+                Console.WriteLine($"Error during login: {ex.Message}");
                 return null;
             }
         }
 
-        // Methode zum Abrufen eines Benutzers anhand seines Tokens
+
+
         public static User GetUserByToken(string token)
         {
-            return users.Find(u => u.Token == token);
+            try
+            {
+                using (var conn = new NpgsqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    var cmd = new NpgsqlCommand("SELECT * FROM users WHERE token = @token", conn);
+                    cmd.Parameters.AddWithValue("token", token);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return new User(reader["username"].ToString(), reader["password"].ToString())
+                            {
+                                ID = reader["user_id"].ToString(),
+                                Token = reader["token"].ToString(),
+                                Coins = (int)reader["coins"]
+                            };
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during token retrieval: {ex.Message}");
+                return null;
+            }
         }
     }
 }

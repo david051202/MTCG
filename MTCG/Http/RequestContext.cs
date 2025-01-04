@@ -15,14 +15,6 @@ namespace MTCG.Http
         public string Body { get; set; }
         public Dictionary<string, string> Headers { get; set; }
 
-        public HttpClient HttpClient
-        {
-            get => default;
-            set
-            {
-            }
-        }
-
         public RequestContext()
         {
             HttpMethod = HttpMethods.GET;
@@ -32,7 +24,5 @@ namespace MTCG.Http
             Body = null;
             Headers = new Dictionary<string, string>();
         }
-
-
     }
 }

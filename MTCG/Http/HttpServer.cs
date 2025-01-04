@@ -56,7 +56,6 @@ namespace MTCG.Http
                 }
                 else
                 {
-                    // Verarbeite die Anfrage basierend auf dem Pfad
                     if (request.HttpMethod == HttpMethods.POST && request.Path == "/users")
                     {
                         User newUser = JsonConvert.DeserializeObject<User>(request.Body);
@@ -80,7 +79,7 @@ namespace MTCG.Http
                             User loggedInUser = User.Login(loginUser.Username, loginUser.Password);
                             if (loggedInUser != null)
                             {
-                                response.StatusCode = StatusCodes.OK;
+                                response.StatusCode = StatusCodes.Ok;
                                 response.Body = $"Login successful. Token: {loggedInUser.Token}"; // Token wird an den Client gesendet
                             }
                             else

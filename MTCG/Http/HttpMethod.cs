@@ -8,13 +8,6 @@ namespace MTCG.Http
 {
     public static class HttpMethod
     {
-        public static HttpServer HttpServer
-        {
-            get => default;
-            set
-            {
-            }
-        }
 
         public static HttpMethods GetHttpMethod(string method)
         {
@@ -23,7 +16,6 @@ namespace MTCG.Http
                 throw new ArgumentException("HTTP method cannot be null or empty.");
             }
 
-            // Konvertiere die Methode in Kleinbuchstaben, um Vergleichsprobleme zu vermeiden
             method = method.ToLowerInvariant();
 
             switch (method)

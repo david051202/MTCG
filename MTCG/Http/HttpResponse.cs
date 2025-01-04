@@ -7,14 +7,6 @@ namespace MTCG.Http
         public StatusCodes StatusCode { get; set; }
         public string Body { get; set; }
 
-        public HttpClient HttpClient
-        {
-            get => default;
-            set
-            {
-            }
-        }
-
         public override string ToString()
         {
             var response = new StringBuilder();
@@ -25,19 +17,5 @@ namespace MTCG.Http
             response.AppendLine(Body);
             return response.ToString();
         }
-    }
-
-    public enum StatusCodes
-    {
-        OK = 200,
-        Created = 201,
-        NoContent = 204,
-        BadRequest = 400,
-        Unauthorized = 401,
-        Forbidden = 403,
-        NotFound = 404,
-        MethodNotAllowed = 405,
-        Conflict = 409,
-        InternalServerError = 500
     }
 }

@@ -18,14 +18,6 @@ namespace MTCG.Http
             this.connection = connection;
         }
 
-        public HttpServer HttpServer
-        {
-            get => default;
-            set
-            {
-            }
-        }
-
         public async Task<RequestContext> ReceiveRequestAsync()
         {
             try
