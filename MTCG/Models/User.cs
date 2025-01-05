@@ -1,22 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using Npgsql;
+using MTCG.Classes;
 
-namespace MTCG.Classes
+namespace MTCG.Models
 {
     public class User
     {
-        public int UserId { get; set; } // Geändert von string ID zu int UserId für Konsistenz mit der Datenbank
+        public int UserId { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
         public string Token { get; set; }
         public int Coins { get; set; }
-        public List<Card> Cards { get; set; } // Zur Verwaltung der Benutzerkarten
+        public int Elo { get; set; }
+        public string Name { get; set; }
+        public string Bio { get; set; }
+        public string Image { get; set; }
+        public List<Card> Cards { get; set; }
 
         public User()
         {
             Cards = new List<Card>();
             Coins = 20;
+            Elo = 100;
         }
 
         public User(string username, string password) : this()
@@ -39,10 +45,16 @@ namespace MTCG.Classes
                         return false;
                     }
 
-                    var cmd = new NpgsqlCommand("INSERT INTO users (username, password, coins) VALUES (@username, @password, @coins)", conn);
+                    var cmd = new NpgsqlCommand(
+                        "INSERT INTO users (username, password, coins, elo, wins, losses, draws) VALUES (@username, @password, @coins, @elo, @wins, @losses, @draws)",
+                        conn);
                     cmd.Parameters.AddWithValue("username", Username);
                     cmd.Parameters.AddWithValue("password", Password);
                     cmd.Parameters.AddWithValue("coins", Coins);
+                    cmd.Parameters.AddWithValue("elo", Elo);
+                    cmd.Parameters.AddWithValue("wins", 0);
+                    cmd.Parameters.AddWithValue("losses", 0);
+                    cmd.Parameters.AddWithValue("draws", 0);
 
                     cmd.ExecuteNonQuery();
 
@@ -74,7 +86,9 @@ namespace MTCG.Classes
             {
                 using (var conn = DatabaseHelper.GetOpenConnection())
                 {
-                    var cmd = new NpgsqlCommand("SELECT user_id, token, coins FROM users WHERE username = @username AND password = @password", conn);
+                    var cmd = new NpgsqlCommand(
+                        "SELECT user_id, token, coins, elo FROM users WHERE username = @username AND password = @password",
+                        conn);
                     cmd.Parameters.AddWithValue("username", username);
                     cmd.Parameters.AddWithValue("password", password);
 
@@ -86,24 +100,30 @@ namespace MTCG.Classes
                             {
                                 UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
                                 Token = reader["token"] as string,
-                                Coins = reader.GetInt32(reader.GetOrdinal("coins"))
+                                Coins = reader.GetInt32(reader.GetOrdinal("coins")),
+                                Elo = reader.GetInt32(reader.GetOrdinal("elo"))
                             };
 
-                            // Generiere einen neuen Token, falls keiner existiert
+                            // Generate a new token if none exists
                             if (string.IsNullOrEmpty(user.Token))
                             {
                                 user.Token = GenerateToken(username);
                             }
 
-                            reader.Close(); // Reader schließen, bevor neuer Befehl ausgeführt wird
+                            reader.Close(); // Close reader before executing a new command
 
-                            var updateCmd = new NpgsqlCommand("UPDATE users SET token = @token WHERE user_id = @user_id", conn);
-                            updateCmd.Parameters.AddWithValue("token", user.Token);
-                            updateCmd.Parameters.AddWithValue("user_id", user.UserId);
-                            updateCmd.ExecuteNonQuery();
+                            using (var updateConn = DatabaseHelper.GetOpenConnection())
+                            {
+                                var updateCmd = new NpgsqlCommand(
+                                    "UPDATE users SET token = @token WHERE user_id = @user_id",
+                                    updateConn);
+                                updateCmd.Parameters.AddWithValue("token", user.Token);
+                                updateCmd.Parameters.AddWithValue("user_id", user.UserId);
+                                updateCmd.ExecuteNonQuery();
+                            }
 
-                            // Laden der Karten des Benutzers
-                            user.Cards = user.GetUserCards(conn);
+                            // Load user's cards
+                            user.Cards = user.GetUserCards();
 
                             Console.ForegroundColor = ConsoleColor.Green;
                             Console.WriteLine("Login successful. Token generated: " + user.Token);
@@ -136,7 +156,9 @@ namespace MTCG.Classes
                 {
                     Console.WriteLine($"[Server] Searching for user with token: {token}");
 
-                    var cmd = new NpgsqlCommand("SELECT user_id, username, coins FROM users WHERE token = @token", conn);
+                    var cmd = new NpgsqlCommand(
+                        "SELECT user_id, username, coins, elo, name, bio, image FROM users WHERE token = @token",
+                        conn);
                     cmd.Parameters.AddWithValue("token", token);
 
                     using (var reader = cmd.ExecuteReader())
@@ -148,15 +170,17 @@ namespace MTCG.Classes
                                 UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
                                 Username = reader.GetString(reader.GetOrdinal("username")),
                                 Coins = reader.GetInt32(reader.GetOrdinal("coins")),
+                                Elo = reader.GetInt32(reader.GetOrdinal("elo")),
+                                Name = reader["name"] as string,
+                                Bio = reader["bio"] as string,
+                                Image = reader["image"] as string,
                                 Token = token
                             };
 
                             Console.WriteLine($"[Server] User found: {user.Username}");
 
-                            reader.Close();
-
-                            // Laden der Karten des Benutzers
-                            user.Cards = user.GetUserCards(conn);
+                            // Load user's cards
+                            user.Cards = user.GetUserCards();
 
                             return user;
                         }
@@ -175,30 +199,114 @@ namespace MTCG.Classes
             }
         }
 
-        private List<Card> GetUserCards(NpgsqlConnection conn)
+        public static User GetUserByUsername(string username)
+        {
+            try
+            {
+                using (var conn = DatabaseHelper.GetOpenConnection())
+                {
+                    var cmd = new NpgsqlCommand(
+                        "SELECT user_id, username, coins, elo, name, bio, image FROM users WHERE username = @username",
+                        conn);
+                    cmd.Parameters.AddWithValue("username", username);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            var user = new User
+                            {
+                                UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
+                                Username = reader.GetString(reader.GetOrdinal("username")),
+                                Coins = reader.GetInt32(reader.GetOrdinal("coins")),
+                                Elo = reader.GetInt32(reader.GetOrdinal("elo")),
+                                Name = reader["name"] as string,
+                                Bio = reader["bio"] as string,
+                                Image = reader["image"] as string
+                            };
+
+                            // Load user's cards
+                            user.Cards = user.GetUserCards();
+
+                            return user;
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving user by username: {ex.Message}");
+                return null;
+            }
+        }
+
+        public UserStats GetStats()
+        {
+            return UserStats.GetStatsByUserId(this.UserId);
+        }
+
+        public bool UpdateUserData(string name, string bio, string image)
+        {
+            try
+            {
+                using (var conn = DatabaseHelper.GetOpenConnection())
+                {
+                    var cmd = new NpgsqlCommand(
+                        "UPDATE users SET name = @name, bio = @bio, image = @image WHERE user_id = @user_id",
+                        conn);
+                    cmd.Parameters.AddWithValue("name", name);
+                    cmd.Parameters.AddWithValue("bio", bio);
+                    cmd.Parameters.AddWithValue("image", image);
+                    cmd.Parameters.AddWithValue("user_id", UserId);
+
+                    cmd.ExecuteNonQuery();
+
+                    Name = name;
+                    Bio = bio;
+                    Image = image;
+
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating user data: {ex.Message}");
+                return false;
+            }
+        }
+
+        private List<Card> GetUserCards()
         {
             var cards = new List<Card>();
 
-            var cmd = new NpgsqlCommand(
-                @"SELECT c.card_id, c.name, c.damage, c.element_type, c.card_type
-                  FROM usercards uc
-                  JOIN cards c ON uc.card_id = c.card_id
-                  WHERE uc.user_id = @user_id", conn);
-            cmd.Parameters.AddWithValue("user_id", UserId);
-
-            using (var reader = cmd.ExecuteReader())
+            using (var conn = DatabaseHelper.GetOpenConnection())
             {
-                while (reader.Read())
+                var cmd = new NpgsqlCommand(
+                    @"SELECT c.card_id, c.name, c.damage, c.element_type, c.card_type
+                      FROM usercards uc
+                      JOIN cards c ON uc.card_id = c.card_id
+                      WHERE uc.user_id = @user_id",
+                    conn);
+                cmd.Parameters.AddWithValue("user_id", UserId);
+
+                using (var reader = cmd.ExecuteReader())
                 {
-                    var card = new Card
+                    while (reader.Read())
                     {
-                        Id = reader.GetGuid(reader.GetOrdinal("card_id")),
-                        Name = reader.GetString(reader.GetOrdinal("name")),
-                        Damage = reader.GetDouble(reader.GetOrdinal("damage")),
-                        ElementType = reader.GetString(reader.GetOrdinal("element_type")),
-                        CardType = reader.GetString(reader.GetOrdinal("card_type"))
-                    };
-                    cards.Add(card);
+                        var card = new Card
+                        {
+                            Id = reader.GetGuid(reader.GetOrdinal("card_id")),
+                            Name = reader.GetString(reader.GetOrdinal("name")),
+                            Damage = reader.GetDouble(reader.GetOrdinal("damage")),
+                            ElementType = reader.GetString(reader.GetOrdinal("element_type")),
+                            CardType = reader.GetString(reader.GetOrdinal("card_type"))
+                        };
+                        cards.Add(card);
+                    }
                 }
             }
 

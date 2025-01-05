@@ -8,12 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-	<PackageReference Include="Npgsql" Version="9.0.2" />
+    <Compile Remove="BusinessLogic\**" />
+    <EmbeddedResource Remove="BusinessLogic\**" />
+    <None Remove="BusinessLogic\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="BusinessLogic\" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	<PackageReference Include="Npgsql" Version="9.0.2" />
   </ItemGroup>
 
 </Project>

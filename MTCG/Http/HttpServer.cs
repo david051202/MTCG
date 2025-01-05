@@ -47,32 +47,41 @@ namespace MTCG.Http
             {
                 var client = new HttpClient(connection);
                 var request = await client.ReceiveRequestAsync();
+                var cleanResourcePath = request.Path.Split('?')[0];
 
-                HttpResponse response = new HttpResponse();
+                HttpResponse response = null;
 
                 if (request == null)
                 {
                     Console.WriteLine("[Server] Bad request received.");
-                    response.StatusCode = StatusCodes.BadRequest;
-                    response.Body = "Invalid request...";
+                    response = new HttpResponse
+                    {
+                        StatusCode = StatusCodes.BadRequest,
+                        Body = "Invalid request..."
+                    };
                 }
                 else
                 {
-                    var route = _routes.FirstOrDefault(r => r.HttpMethod == request.HttpMethod.ToString() && r.Path == request.Path);
-                    if (route != null)
+                    foreach (var route in _routes)
                     {
-                        response = route.Action(request);
+                        if (route.HttpMethod.Equals(request.HttpMethod.ToString(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (route.IsMatch(cleanResourcePath, out var parameters))
+                            {
+                                response = route.Action(request, parameters);
+                                break;
+                            }
+                        }
                     }
-                    else
-                    {
-                        response.StatusCode = StatusCodes.NotFound;
-                        response.Body = "Endpoint not found.";
-                    }
-                }
 
-                if (response.StatusCode == 0)
-                {
-                    response.StatusCode = StatusCodes.InternalServerError;
+                    if (response == null)
+                    {
+                        response = new HttpResponse
+                        {
+                            StatusCode = StatusCodes.NotFound,
+                            Body = "Endpoint not found."
+                        };
+                    }
                 }
 
                 await client.SendResponseAsync(response);
@@ -84,6 +93,16 @@ namespace MTCG.Http
             }
         }
 
+
+        private string ExtractPath(string fullPath)
+        {
+            if (string.IsNullOrEmpty(fullPath))
+                return "/";
+
+            int queryStart = fullPath.IndexOf('?');
+            return queryStart >= 0 ? fullPath.Substring(0, queryStart) : fullPath;
+        }
+
         public void Stop()
         {
             listen = false;
@@ -92,3 +111,4 @@ namespace MTCG.Http
         }
     }
 }
+

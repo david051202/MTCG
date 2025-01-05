@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Npgsql;
+using MTCG.Models;
 
 namespace MTCG.Classes
 {

@@ -42,7 +42,7 @@ namespace MTCG.Http
                         return null;
                     }
 
-                    request.HttpMethod = HttpMethod.GetHttpMethod(parts[0]);
+                    request.HttpMethod = Enum.Parse<HttpMethods>(parts[0], true);
                     request.Path = parts[1];
                     request.HttpVersion = parts[2];
 
@@ -125,7 +125,7 @@ namespace MTCG.Http
 
                     // Schreibe die Statuszeile
                     await writer.WriteAsync($"HTTP/1.1 {(int)response.StatusCode} {response.StatusCode}\r\n");
-                    Console.WriteLine($"[Client] Status: {(int)response.StatusCode} {response.StatusCode}");
+                    Console.WriteLine($"\n[Client] Status: {(int)response.StatusCode} {response.StatusCode}");
 
                     // Schreibe die Header und den Body
                     if (!string.IsNullOrEmpty(response.Body))
