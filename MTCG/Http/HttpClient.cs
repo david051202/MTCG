@@ -73,6 +73,9 @@ namespace MTCG.Http
                         }
                     }
 
+                    // Token extrahieren
+                    request.ExtractToken();
+
                     // Request Body einlesen, falls vorhanden
                     if ((request.HttpMethod == HttpMethods.POST || request.HttpMethod == HttpMethods.PUT) && contentLength > 0)
                     {
@@ -102,7 +105,6 @@ namespace MTCG.Http
             }
         }
 
-
         public async Task SendResponseAsync(HttpResponse response)
         {
             try
@@ -130,6 +132,7 @@ namespace MTCG.Http
                     {
                         var payload = Encoding.UTF8.GetBytes(response.Body);
                         await writer.WriteAsync($"Content-Length: {payload.Length}\r\n");
+                        await writer.WriteAsync("Content-Type: application/json; charset=UTF-8\r\n");
                         await writer.WriteAsync("\r\n");
                         await writer.WriteAsync(response.Body);
                     }

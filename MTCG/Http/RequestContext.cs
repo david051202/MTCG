@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MTCG.Http
 {
@@ -24,5 +21,17 @@ namespace MTCG.Http
             Body = null;
             Headers = new Dictionary<string, string>();
         }
+
+        public void ExtractToken()
+        {
+            if (Headers.TryGetValue("Authorization", out var authHeader))
+            {
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    Token = authHeader.Substring("Bearer ".Length).Trim();
+                }
+            }
+        }
     }
 }
+

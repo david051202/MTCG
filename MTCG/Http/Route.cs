@@ -21,7 +21,7 @@ namespace MTCG.Http
                 new Route
                 {
                     Path = "/users",
-                    HttpMethod = "POST", 
+                    HttpMethod = "POST",
                     Action = (request) =>
                     {
                         var response = new HttpResponse();
@@ -42,7 +42,7 @@ namespace MTCG.Http
                 new Route
                 {
                     Path = "/sessions",
-                    HttpMethod = "POST", 
+                    HttpMethod = "POST",
                     Action = (request) =>
                     {
                         var response = new HttpResponse();
@@ -68,8 +68,83 @@ namespace MTCG.Http
                         }
                         return response;
                     }
-                }
+                },
+                new Route
+                {
+                    Path = "/packages",
+                    HttpMethod = "POST",
+                    Action = (request) =>
+                    {
+                        var response = new HttpResponse();
+
+                        if (string.IsNullOrEmpty(request.Token))
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Unauthorized. Token is missing.";
+                            return response;
+                        }
+
+                        User user = User.GetUserByToken(request.Token);
+                        if (user == null || user.Username != "admin")
+                        {
+                            response.StatusCode = StatusCodes.Forbidden;
+                            response.Body = "Provided user is not 'admin'.";
+                            return response;
+                        }
+
+                        // Deserialize the card data
+                        List<Card> cards = JsonConvert.DeserializeObject<List<Card>>(request.Body);
+                        if (cards == null || cards.Count != 5)
+                        {
+                            response.StatusCode = StatusCodes.BadRequest;
+                            response.Body = "Invalid package data. A package must contain exactly 5 cards.";
+                            return response;
+                        }
+
+                        // Handle missing properties by inferring them
+                        foreach (var card in cards)
+                        {
+                            // Infer ElementType from Name if missing
+                            if (string.IsNullOrEmpty(card.ElementType))
+                            {
+                                card.ElementType = InferElementTypeFromName(card.Name);
+                            }
+
+                            // Infer CardType from Name if missing
+                            if (string.IsNullOrEmpty(card.CardType))
+                            {
+                                card.CardType = card.Name.ToLower().Contains("spell") ? "spell" : "monster";
+                            }
+                        }
+
+                        if (Package.CreatePackage(cards))
+                        {
+                            response.StatusCode = StatusCodes.Created;
+                            response.Body = "Package and cards successfully created.";
+                        }
+                        else
+                        {
+                            response.StatusCode = StatusCodes.Conflict;
+                            response.Body = "At least one card in the package already exists.";
+                        }
+
+                        return response;
+                    }
+                },
+
             };
+        }
+
+        // Helper method to infer ElementType from the card name
+        private static string InferElementTypeFromName(string name)
+        {
+            if (name.ToLower().Contains("water"))
+                return "Water";
+            if (name.ToLower().Contains("fire"))
+                return "Fire";
+            if (name.ToLower().Contains("normal"))
+                return "Normal";
+            return "Normal"; // Default to Normal if no keyword is found
         }
     }
 }

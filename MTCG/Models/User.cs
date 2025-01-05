@@ -13,13 +13,11 @@ namespace MTCG.Classes
         public int Elo { get; set; }
         public int Coins { get; set; }
 
-        private static string connectionString = "Host=localhost;Username=postgres;Password=postgres;Database=mtcgdb";
-
         public User(string username, string password)
         {
             Username = username;
             Password = password;
-            Token = null;  // Token wird erst beim Login erstellt
+            Token = null;
             Elo = 100;
             Coins = 20;
         }
@@ -28,10 +26,8 @@ namespace MTCG.Classes
         {
             try
             {
-                using (var conn = new NpgsqlConnection(connectionString))
+                using (var conn = DatabaseHelper.GetOpenConnection())
                 {
-                    conn.Open();
-
                     if (IsUserInDatabase(conn))
                     {
                         Console.ForegroundColor = ConsoleColor.DarkRed;
@@ -40,14 +36,10 @@ namespace MTCG.Classes
                         return false;
                     }
 
-                    // Generiere Token
-                    Token = Guid.NewGuid().ToString();
-
-                    var cmd = new NpgsqlCommand("INSERT INTO users (username, password, coins, token) VALUES (@username, @password, @coins, @token::uuid)", conn);
+                    var cmd = new NpgsqlCommand("INSERT INTO users (username, password, coins) VALUES (@username, @password, @coins)", conn);
                     cmd.Parameters.AddWithValue("username", Username);
                     cmd.Parameters.AddWithValue("password", Password);
                     cmd.Parameters.AddWithValue("coins", Coins);
-                    cmd.Parameters.AddWithValue("token", Token);
 
                     cmd.ExecuteNonQuery();
 
@@ -65,7 +57,6 @@ namespace MTCG.Classes
             return false;
         }
 
-
         private bool IsUserInDatabase(NpgsqlConnection conn)
         {
             var cmd = new NpgsqlCommand("SELECT COUNT(*) FROM users WHERE username = @username", conn);
@@ -79,10 +70,8 @@ namespace MTCG.Classes
         {
             try
             {
-                using (var conn = new NpgsqlConnection(connectionString))
+                using (var conn = DatabaseHelper.GetOpenConnection())
                 {
-                    conn.Open();
-
                     var cmd = new NpgsqlCommand("SELECT * FROM users WHERE username = @username AND password = @password", conn);
                     cmd.Parameters.AddWithValue("username", username);
                     cmd.Parameters.AddWithValue("password", password);
@@ -98,11 +87,11 @@ namespace MTCG.Classes
                                 Coins = (int)reader["coins"]
                             };
 
-                            user.Token = Guid.NewGuid().ToString();
+                            user.Token = username + "-mtcgToken";
 
                             reader.Close(); // Schließe den Reader, bevor ein neuer Befehl ausgeführt wird
 
-                            var updateCmd = new NpgsqlCommand("UPDATE users SET token = @token::uuid WHERE user_id = @user_id", conn);
+                            var updateCmd = new NpgsqlCommand("UPDATE users SET token = @token WHERE user_id = @user_id", conn);
                             updateCmd.Parameters.AddWithValue("token", user.Token);
                             updateCmd.Parameters.AddWithValue("user_id", int.Parse(user.ID));
                             updateCmd.ExecuteNonQuery();
@@ -130,24 +119,24 @@ namespace MTCG.Classes
             }
         }
 
-
-
         public static User GetUserByToken(string token)
         {
             try
             {
-                using (var conn = new NpgsqlConnection(connectionString))
+                using (var conn = DatabaseHelper.GetOpenConnection())
                 {
-                    conn.Open();
+                    Console.WriteLine($"[Server] Searching for user with token: {token}");
 
-                    var cmd = new NpgsqlCommand("SELECT * FROM users WHERE token = @token", conn);
+                    var cmd = new NpgsqlCommand("SELECT user_id, username, token, coins FROM users WHERE token = @token", conn);
                     cmd.Parameters.AddWithValue("token", token);
 
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            return new User(reader["username"].ToString(), reader["password"].ToString())
+                            Console.WriteLine($"[Server] User found: {reader["username"]}");
+
+                            return new User(reader["username"].ToString(), null)
                             {
                                 ID = reader["user_id"].ToString(),
                                 Token = reader["token"].ToString(),
@@ -156,6 +145,7 @@ namespace MTCG.Classes
                         }
                         else
                         {
+                            Console.WriteLine("[Server] No user found with the given token.");
                             return null;
                         }
                     }
@@ -169,3 +159,5 @@ namespace MTCG.Classes
         }
     }
 }
+
+

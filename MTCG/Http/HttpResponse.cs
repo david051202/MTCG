@@ -10,7 +10,7 @@ namespace MTCG.Http
         public override string ToString()
         {
             var response = new StringBuilder();
-            response.AppendLine($"HTTP/1.1 {StatusCode}");
+            response.AppendLine($"HTTP/1.1 {(int)StatusCode} {StatusCode}");
             response.AppendLine("Content-Type: application/json; charset=UTF-8");
             response.AppendLine($"Content-Length: {Encoding.UTF8.GetByteCount(Body)}");
             response.AppendLine();
@@ -19,3 +19,6 @@ namespace MTCG.Http
         }
     }
 }
+
+
+
