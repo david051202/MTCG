@@ -131,7 +131,55 @@ namespace MTCG.Http
                         return response;
                     }
                 },
+                new Route
+                {
+                    Path = "/transactions/packages",
+                    HttpMethod = "POST",
+                    Action = (request) =>
+                    {
+                        var response = new HttpResponse();
 
+                        if (string.IsNullOrEmpty(request.Token))
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Unauthorized. Token is missing.";
+                            return response;
+                        }
+
+                        User user = User.GetUserByToken(request.Token);
+                        if (user == null)
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Invalid token.";
+                            return response;
+                        }
+
+                        var result = Package.BuyPackage(user);
+
+                        if (result == Package.BuyResult.NoPackageAvailable)
+                        {
+                            response.StatusCode = StatusCodes.NotFound;
+                            response.Body = "No card package available for buying.";
+                        }
+                        else if (result == Package.BuyResult.NotEnoughCoins)
+                        {
+                            response.StatusCode = StatusCodes.Forbidden;
+                            response.Body = "Not enough money for buying a card package.";
+                        }
+                        else if (result == Package.BuyResult.Success)
+                        {
+                            response.StatusCode = StatusCodes.Ok;
+                            response.Body = JsonConvert.SerializeObject(user.Cards);
+                        }
+                        else
+                        {
+                            response.StatusCode = StatusCodes.InternalServerError;
+                            response.Body = "An error occurred while processing your request.";
+                        }
+
+                        return response;
+                    }
+                },
             };
         }
 

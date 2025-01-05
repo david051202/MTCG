@@ -6,20 +6,23 @@ namespace MTCG.Classes
 {
     public class User
     {
-        public string ID { get; set; }
+        public int UserId { get; set; } // Geändert von string ID zu int UserId für Konsistenz mit der Datenbank
         public string Username { get; set; }
         public string Password { get; set; }
         public string Token { get; set; }
-        public int Elo { get; set; }
         public int Coins { get; set; }
+        public List<Card> Cards { get; set; } // Zur Verwaltung der Benutzerkarten
 
-        public User(string username, string password)
+        public User()
+        {
+            Cards = new List<Card>();
+            Coins = 20;
+        }
+
+        public User(string username, string password) : this()
         {
             Username = username;
             Password = password;
-            Token = null;
-            Elo = 100;
-            Coins = 20;
         }
 
         public bool CreateUser()
@@ -52,9 +55,8 @@ namespace MTCG.Classes
             catch (Exception ex)
             {
                 Console.WriteLine($"Error during user creation: {ex.Message}");
+                return false;
             }
-
-            return false;
         }
 
         private bool IsUserInDatabase(NpgsqlConnection conn)
@@ -72,7 +74,7 @@ namespace MTCG.Classes
             {
                 using (var conn = DatabaseHelper.GetOpenConnection())
                 {
-                    var cmd = new NpgsqlCommand("SELECT * FROM users WHERE username = @username AND password = @password", conn);
+                    var cmd = new NpgsqlCommand("SELECT user_id, token, coins FROM users WHERE username = @username AND password = @password", conn);
                     cmd.Parameters.AddWithValue("username", username);
                     cmd.Parameters.AddWithValue("password", password);
 
@@ -82,19 +84,26 @@ namespace MTCG.Classes
                         {
                             var user = new User(username, password)
                             {
-                                ID = reader["user_id"].ToString(),
-                                Token = reader["token"].ToString(),
-                                Coins = (int)reader["coins"]
+                                UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
+                                Token = reader["token"] as string,
+                                Coins = reader.GetInt32(reader.GetOrdinal("coins"))
                             };
 
-                            user.Token = username + "-mtcgToken";
+                            // Generiere einen neuen Token, falls keiner existiert
+                            if (string.IsNullOrEmpty(user.Token))
+                            {
+                                user.Token = GenerateToken(username);
+                            }
 
-                            reader.Close(); // Schließe den Reader, bevor ein neuer Befehl ausgeführt wird
+                            reader.Close(); // Reader schließen, bevor neuer Befehl ausgeführt wird
 
                             var updateCmd = new NpgsqlCommand("UPDATE users SET token = @token WHERE user_id = @user_id", conn);
                             updateCmd.Parameters.AddWithValue("token", user.Token);
-                            updateCmd.Parameters.AddWithValue("user_id", int.Parse(user.ID));
+                            updateCmd.Parameters.AddWithValue("user_id", user.UserId);
                             updateCmd.ExecuteNonQuery();
+
+                            // Laden der Karten des Benutzers
+                            user.Cards = user.GetUserCards(conn);
 
                             Console.ForegroundColor = ConsoleColor.Green;
                             Console.WriteLine("Login successful. Token generated: " + user.Token);
@@ -127,21 +136,29 @@ namespace MTCG.Classes
                 {
                     Console.WriteLine($"[Server] Searching for user with token: {token}");
 
-                    var cmd = new NpgsqlCommand("SELECT user_id, username, token, coins FROM users WHERE token = @token", conn);
+                    var cmd = new NpgsqlCommand("SELECT user_id, username, coins FROM users WHERE token = @token", conn);
                     cmd.Parameters.AddWithValue("token", token);
 
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            Console.WriteLine($"[Server] User found: {reader["username"]}");
-
-                            return new User(reader["username"].ToString(), null)
+                            var user = new User
                             {
-                                ID = reader["user_id"].ToString(),
-                                Token = reader["token"].ToString(),
-                                Coins = (int)reader["coins"]
+                                UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
+                                Username = reader.GetString(reader.GetOrdinal("username")),
+                                Coins = reader.GetInt32(reader.GetOrdinal("coins")),
+                                Token = token
                             };
+
+                            Console.WriteLine($"[Server] User found: {user.Username}");
+
+                            reader.Close();
+
+                            // Laden der Karten des Benutzers
+                            user.Cards = user.GetUserCards(conn);
+
+                            return user;
                         }
                         else
                         {
@@ -157,7 +174,40 @@ namespace MTCG.Classes
                 return null;
             }
         }
+
+        private List<Card> GetUserCards(NpgsqlConnection conn)
+        {
+            var cards = new List<Card>();
+
+            var cmd = new NpgsqlCommand(
+                @"SELECT c.card_id, c.name, c.damage, c.element_type, c.card_type
+                  FROM usercards uc
+                  JOIN cards c ON uc.card_id = c.card_id
+                  WHERE uc.user_id = @user_id", conn);
+            cmd.Parameters.AddWithValue("user_id", UserId);
+
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    var card = new Card
+                    {
+                        Id = reader.GetGuid(reader.GetOrdinal("card_id")),
+                        Name = reader.GetString(reader.GetOrdinal("name")),
+                        Damage = reader.GetDouble(reader.GetOrdinal("damage")),
+                        ElementType = reader.GetString(reader.GetOrdinal("element_type")),
+                        CardType = reader.GetString(reader.GetOrdinal("card_type"))
+                    };
+                    cards.Add(card);
+                }
+            }
+
+            return cards;
+        }
+
+        private static string GenerateToken(string username)
+        {
+            return $"{username}-mtcgToken";
+        }
     }
 }
-
-
