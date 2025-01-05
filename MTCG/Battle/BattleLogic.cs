@@ -91,7 +91,7 @@ namespace MTCG.Classes
 
         private int CalculateDamage(Card attacker, Card defender)
         {
-            int baseDamage = attacker.Damage;
+            int baseDamage = (int)attacker.Damage; // Explicit cast from double to int
 
             if (attacker.CardType == "spell")
             {
@@ -164,7 +164,9 @@ namespace MTCG.Classes
             User loser = winnerUsername == _player1.Username ? _player2 : _player1;
 
             winner.Stats.GamesPlayed += 1;
+            winner.Stats.Wins += 1;
             loser.Stats.GamesPlayed += 1;
+            loser.Stats.Losses += 1;
 
             // Simple ELO calculation example
             int kFactor = 32;
@@ -186,9 +188,10 @@ namespace MTCG.Classes
                 int playerIndex = random.Next(2);
                 User selectedPlayer = playerIndex == 0 ? _player1 : _player2;
                 int cardIndex = random.Next(selectedPlayer.Cards.Count);
-                selectedPlayer.Cards[cardIndex].Damage *= 2;
+                selectedPlayer.Cards[cardIndex].Damage = Math.Min(selectedPlayer.Cards[cardIndex].Damage * 2, double.MaxValue);
                 _battleLog.AppendLine($"{selectedPlayer.Username} received a booster! {selectedPlayer.Cards[cardIndex].Name}'s damage is doubled for this round.");
             }
         }
     }
 }
+

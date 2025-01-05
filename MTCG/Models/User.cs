@@ -17,12 +17,14 @@ namespace MTCG.Models
         public string Bio { get; set; }
         public string Image { get; set; }
         public List<Card> Cards { get; set; }
+        public UserStats Stats { get; set; }
 
         public User()
         {
             Cards = new List<Card>();
+            Stats = new UserStats();
             Coins = 20;
-            Elo = 100;
+            Elo = 1000;
         }
 
         public User(string username, string password) : this()
@@ -316,6 +318,22 @@ namespace MTCG.Models
         private static string GenerateToken(string username)
         {
             return $"{username}-mtcgToken";
+        }
+
+        public void AddCard(Card card)
+        {
+            if (card != null)
+            {
+                Cards.Add(card);
+            }
+        }
+
+        public void RemoveCard(Card card)
+        {
+            if (card != null)
+            {
+                Cards.Remove(card);
+            }
         }
     }
 }

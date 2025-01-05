@@ -75,6 +75,7 @@ namespace MTCG.Classes
                         // Check if the user has enough coins
                         if (user.Coins < 5)
                         {
+                            Console.WriteLine($"[Server] User {user.Username} does not have enough coins. Current coins: {user.Coins}");
                             return BuyResult.NotEnoughCoins;
                         }
 
@@ -86,6 +87,7 @@ namespace MTCG.Classes
                         if (packageIdObj == null)
                         {
                             // No package available
+                            Console.WriteLine("[Server] No package available for purchase.");
                             return BuyResult.NoPackageAvailable;
                         }
 
@@ -94,9 +96,9 @@ namespace MTCG.Classes
                         // Retrieve the cards in the package
                         var getCardsCmd = new NpgsqlCommand(
                             @"SELECT c.card_id, c.name, c.damage, c.element_type, c.card_type
-                              FROM packagecards pc
-                              JOIN cards c ON pc.card_id = c.card_id
-                              WHERE pc.package_id = @package_id", conn);
+                      FROM packagecards pc
+                      JOIN cards c ON pc.card_id = c.card_id
+                      WHERE pc.package_id = @package_id", conn);
                         getCardsCmd.Transaction = transaction;
                         getCardsCmd.Parameters.AddWithValue("package_id", packageId);
 
@@ -145,6 +147,7 @@ namespace MTCG.Classes
                         // Commit the transaction
                         transaction.Commit();
 
+                        Console.WriteLine($"[Server] User {user.Username} successfully purchased a package.");
                         return BuyResult.Success;
                     }
                 }

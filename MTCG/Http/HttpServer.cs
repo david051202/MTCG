@@ -68,7 +68,7 @@ namespace MTCG.Http
                         {
                             if (route.IsMatch(cleanResourcePath, out var parameters))
                             {
-                                response = route.Action(request, parameters);
+                                response = await route.Action(request, parameters);
                                 break;
                             }
                         }

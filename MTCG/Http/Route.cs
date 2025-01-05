@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using MTCG.Classes;
 using MTCG.Models;
 using Newtonsoft.Json;
@@ -11,7 +12,7 @@ namespace MTCG.Http
     {
         public string Path { get; set; }
         public string HttpMethod { get; set; }
-        public Func<RequestContext, Dictionary<string, string>, HttpResponse> Action { get; set; }
+        public Func<RequestContext, Dictionary<string, string>, Task<HttpResponse>> Action { get; set; }
 
         public bool IsMatch(string requestPath, out Dictionary<string, string> parameters)
         {
@@ -46,7 +47,7 @@ namespace MTCG.Http
                 {
                     Path = "/users",
                     HttpMethod = "POST",
-                    Action = (request, parameters) =>
+                    Action = async (request, parameters) =>
                     {
                         Console.WriteLine("[Debug] Handling POST request for /users");
                         var response = new HttpResponse();
@@ -68,7 +69,7 @@ namespace MTCG.Http
                 {
                     Path = "/sessions",
                     HttpMethod = "POST",
-                    Action = (request, parameters) =>
+                    Action = async (request, parameters) =>
                     {
                         Console.WriteLine("[Debug] Handling POST request for /sessions");
                         var response = new HttpResponse();
@@ -99,7 +100,7 @@ namespace MTCG.Http
                 {
                     Path = "/packages",
                     HttpMethod = "POST",
-                    Action = (request, parameters) =>
+                    Action = async (request, parameters) =>
                     {
                         Console.WriteLine("[Debug] Handling POST request for /packages");
                         var response = new HttpResponse();
@@ -159,60 +160,60 @@ namespace MTCG.Http
                     }
                 },
                 new Route
-                {
-                    Path = "/transactions/packages",
-                    HttpMethod = "POST",
-                    Action = (request, parameters) =>
-                    {
-                        Console.WriteLine("[Debug] Handling POST request for /transactions/packages");
-                        var response = new HttpResponse();
+{
+    Path = "/transactions/packages",
+    HttpMethod = "POST",
+    Action = async (request, parameters) =>
+    {
+        Console.WriteLine("[Debug] Handling POST request for /transactions/packages");
+        var response = new HttpResponse();
 
-                        if (string.IsNullOrEmpty(request.Token))
-                        {
-                            response.StatusCode = StatusCodes.Unauthorized;
-                            response.Body = "Unauthorized. Token is missing.";
-                            return response;
-                        }
+        if (string.IsNullOrEmpty(request.Token))
+        {
+            response.StatusCode = StatusCodes.Unauthorized;
+            response.Body = "Unauthorized. Token is missing.";
+            return response;
+        }
 
-                        User user = User.GetUserByToken(request.Token);
-                        if (user == null)
-                        {
-                            response.StatusCode = StatusCodes.Unauthorized;
-                            response.Body = "Invalid token.";
-                            return response;
-                        }
+        User user = User.GetUserByToken(request.Token);
+        if (user == null)
+        {
+            response.StatusCode = StatusCodes.Unauthorized;
+            response.Body = "Invalid token.";
+            return response;
+        }
 
-                        var result = Package.BuyPackage(user);
+        var result = Package.BuyPackage(user);
 
-                        if (result == Package.BuyResult.NoPackageAvailable)
-                        {
-                            response.StatusCode = StatusCodes.NotFound;
-                            response.Body = "No card package available for buying.";
-                        }
-                        else if (result == Package.BuyResult.NotEnoughCoins)
-                        {
-                            response.StatusCode = StatusCodes.Forbidden;
-                            response.Body = "Not enough money for buying a card package.";
-                        }
-                        else if (result == Package.BuyResult.Success)
-                        {
-                            response.StatusCode = StatusCodes.Ok;
-                            response.Body = JsonConvert.SerializeObject(user.Cards);
-                        }
-                        else
-                        {
-                            response.StatusCode = StatusCodes.InternalServerError;
-                            response.Body = "An error occurred while processing your request.";
-                        }
+        if (result == Package.BuyResult.NoPackageAvailable)
+        {
+            response.StatusCode = StatusCodes.NotFound;
+            response.Body = "No card package available for buying.";
+        }
+        else if (result == Package.BuyResult.NotEnoughCoins)
+        {
+            response.StatusCode = StatusCodes.Forbidden;
+            response.Body = "Not enough money for buying a card package.";
+        }
+        else if (result == Package.BuyResult.Success)
+        {
+            response.StatusCode = StatusCodes.Ok;
+            response.Body = JsonConvert.SerializeObject(user.Cards);
+        }
+        else
+        {
+            response.StatusCode = StatusCodes.InternalServerError;
+            response.Body = "An error occurred while processing your request.";
+        }
 
-                        return response;
-                    }
-                },
+        return response;
+    }
+},
                 new Route
                 {
                     Path = "/cards",
                     HttpMethod = "GET",
-                    Action = (request, parameters) =>
+                    Action = async (request, parameters) =>
                     {
                         Console.WriteLine("[Debug] Handling GET request for /cards");
                         var response = new HttpResponse();
@@ -255,7 +256,7 @@ namespace MTCG.Http
                 {
                     Path = "/deck",
                     HttpMethod = "GET",
-                    Action = (request, parameters) =>
+                    Action = async (request, parameters) =>
                     {
                         Console.WriteLine("[Debug] Handling GET request for /deck");
                         var response = new HttpResponse();
@@ -319,7 +320,7 @@ namespace MTCG.Http
                 {
                     Path = "/deck",
                     HttpMethod = "PUT",
-                    Action = (request, parameters) =>
+                    Action = async (request, parameters) =>
                     {
                         Console.WriteLine("[Debug] Handling PUT request for /deck");
                         var response = new HttpResponse();
@@ -377,7 +378,7 @@ namespace MTCG.Http
                 {
                     Path = "/users/{username}",
                     HttpMethod = "GET",
-                    Action = (request, parameters) =>
+                    Action = async (request, parameters) =>
                     {
                         var response = new HttpResponse();
 
@@ -442,7 +443,7 @@ namespace MTCG.Http
                 {
                     Path = "/users/{username}",
                     HttpMethod = "PUT",
-                    Action = (request, parameters) =>
+                    Action = async (request, parameters) =>
                     {
                         Console.WriteLine("[Debug] Handling PUT request for /users/{username}");
                         var response = new HttpResponse();
@@ -504,7 +505,7 @@ namespace MTCG.Http
                 {
                     Path = "/stats",
                     HttpMethod = "GET",
-                    Action = (request, parameters) =>
+                    Action = async (request, parameters) =>
                     {
                         Console.WriteLine("[Debug] Handling GET request for /stats");
                         var response = new HttpResponse();
@@ -554,7 +555,7 @@ namespace MTCG.Http
                 {
                     Path = "/scoreboard",
                     HttpMethod = "GET",
-                    Action = (request, parameters) =>
+                    Action = async (request, parameters) =>
                     {
                         Console.WriteLine("[Debug] Handling GET request for /scoreboard");
                         var response = new HttpResponse();
@@ -592,6 +593,7 @@ namespace MTCG.Http
                             response.StatusCode = StatusCodes.Ok;
                             response.Body = JsonConvert.SerializeObject(scoreboard, Formatting.Indented);
                         }
+
                         else
                         {
                             response.StatusCode = StatusCodes.InternalServerError;
@@ -602,47 +604,47 @@ namespace MTCG.Http
                     }
                 },
                 new Route
-                {
-                    Path = "/battles",
-                    HttpMethod = "POST",
-                    Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling POST request for /battles");
-                        var response = new HttpResponse();
-
-                        if (string.IsNullOrEmpty(request.Token))
+                        Path = "/battles",
+                        HttpMethod = "POST",
+                        Action = async (request, parameters) =>
                         {
-                            response.StatusCode = StatusCodes.Unauthorized;
-                            response.Body = "Unauthorized. Token is missing.";
+                            Console.WriteLine("[Debug] Handling POST request for /battles");
+                            var response = new HttpResponse();
+
+                            if (string.IsNullOrEmpty(request.Token))
+                            {
+                                response.StatusCode = StatusCodes.Unauthorized;
+                                response.Body = "Unauthorized. Token is missing.";
+                                return response;
+                            }
+
+                            User user = User.GetUserByToken(request.Token);
+                            if (user == null)
+                            {
+                                response.StatusCode = StatusCodes.Unauthorized;
+                                response.Body = "Invalid token.";
+                                return response;
+                            }
+
+                            // Initiate battle
+                            string battleLog = await BattleManager.Instance.InitiateBattleAsync(user);
+
+                            if (!string.IsNullOrEmpty(battleLog))
+                            {
+                                response.StatusCode = StatusCodes.Ok;
+                                response.Body = battleLog;
+                            }
+                            else
+                            {
+                                response.StatusCode = StatusCodes.InternalServerError;
+                                response.Body = "An error occurred while initiating the battle.";
+                            }
+
                             return response;
                         }
-
-                        User user = User.GetUserByToken(request.Token);
-                        if (user == null)
-                        {
-                            response.StatusCode = StatusCodes.Unauthorized;
-                            response.Body = "Invalid token.";
-                            return response;
-                        }
-
-                        // Initiate battle
-                        string battleLog = await BattleManager.Instance.InitiateBattleAsync(user);
-
-                        if (!string.IsNullOrEmpty(battleLog))
-                        {
-                            response.StatusCode = StatusCodes.Ok;
-                            response.Body = battleLog;
-                        }
-                        else
-                        {
-                            response.StatusCode = StatusCodes.InternalServerError;
-                            response.Body = "An error occurred while initiating the battle.";
-                        }
-
-                        return response;
                     }
-                },
-            };
+                };
 
             return routes;
         }
