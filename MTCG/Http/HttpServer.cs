@@ -91,8 +91,11 @@ namespace MTCG.Http
             {
                 Console.WriteLine($"[Server] Error while handling client: {ex.Message}");
             }
+            finally
+            {
+                connection.Close();
+            }
         }
-
 
         private string ExtractPath(string fullPath)
         {
@@ -111,4 +114,5 @@ namespace MTCG.Http
         }
     }
 }
+
 

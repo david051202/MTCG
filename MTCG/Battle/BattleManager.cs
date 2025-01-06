@@ -7,32 +7,51 @@ namespace MTCG.Classes
 {
     public class BattleManager
     {
-        private static readonly Lazy<BattleManager> _instance = new(() => new BattleManager());
+        private static readonly Lazy<BattleManager> _instance = new Lazy<BattleManager>(() => new BattleManager());
         public static BattleManager Instance => _instance.Value;
 
-        private readonly ConcurrentQueue<User> _lobby;
+        private readonly ConcurrentQueue<User> _lobbyQueue = new ConcurrentQueue<User>();
 
-        private BattleManager()
-        {
-            _lobby = new ConcurrentQueue<User>();
-        }
+        private BattleManager() { }
 
         public async Task<string> InitiateBattleAsync(User user)
         {
             Console.WriteLine($"[Lobby] User {user.Username} is entering the battle lobby.");
 
-            if (_lobby.TryDequeue(out User opponent))
+            _lobbyQueue.Enqueue(user);
+
+            while (true)
             {
-                Console.WriteLine($"[Lobby] Opponent found: {opponent.Username}. Starting battle.");
-                var battle = new BattleLogic(user, opponent);
-                string log = await battle.StartBattleAsync();
-                return log;
+                if (_lobbyQueue.TryDequeue(out var opponent))
+                {
+                    if (opponent.UserId != user.UserId)
+                    {
+                        Console.WriteLine($"[Lobby] Opponent found: {opponent.Username}. Starting battle.");
+                        return await StartBattleAsync(user, opponent);
+                    }
+                    else
+                    {
+                        _lobbyQueue.Enqueue(opponent);
+                    }
+                }
+
+                await Task.Delay(1000); // Wait for 1 second before checking again
             }
-            else
+        }
+
+        private async Task<string> StartBattleAsync(User player1, User player2)
+        {
+            try
             {
-                _lobby.Enqueue(user);
-                Console.WriteLine($"[Lobby] No opponent found. User {user.Username} is waiting in the lobby.");
-                return "Waiting for an opponent to join the battle.";
+                var battleLogic = new BattleLogic(player1, player2);
+                string battleLog = await battleLogic.StartBattleAsync();
+                Console.WriteLine($"[Battle] Battle between {player1.Username} and {player2.Username} completed.");
+                return battleLog;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Battle] Error during battle: {ex.Message}");
+                return $"Error during battle: {ex.Message}";
             }
         }
     }

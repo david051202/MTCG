@@ -643,7 +643,242 @@ namespace MTCG.Http
 
                             return response;
                         }
+                    },
+                new Route
+                {
+                    Path = "/tradings",
+                    HttpMethod = "GET",
+                    Action = async (request, parameters) =>
+                    {
+                        Console.WriteLine("[Debug] Handling GET request for /tradings");
+                        var response = new HttpResponse();
+
+                        if (string.IsNullOrEmpty(request.Token))
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Unauthorized. Token is missing.";
+                            return response;
+                        }
+
+                        User user = User.GetUserByToken(request.Token);
+                        if (user == null)
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Invalid token.";
+                            return response;
+                        }
+
+                        var tradingDeals = TradingDeal.GetAllTradingDeals();
+                        if (tradingDeals.Count == 0)
+                        {
+                            response.StatusCode = StatusCodes.NoContent;
+                        }
+                        else
+                        {
+                            response.StatusCode = StatusCodes.Ok;
+                            response.Body = JsonConvert.SerializeObject(tradingDeals);
+                        }
+
+                        return response;
                     }
+                },
+                new Route
+                {
+                     Path = "/tradings",
+    HttpMethod = "POST",
+    Action = async (request, parameters) =>
+    {
+        Console.WriteLine("[Debug] Handling POST request for /tradings");
+        var response = new HttpResponse();
+
+        if (string.IsNullOrEmpty(request.Token))
+        {
+            response.StatusCode = StatusCodes.Unauthorized;
+            response.Body = "Unauthorized. Token is missing.";
+            return response;
+        }
+
+        User user = User.GetUserByToken(request.Token);
+        if (user == null)
+        {
+            response.StatusCode = StatusCodes.Unauthorized;
+            response.Body = "Invalid token.";
+            return response;
+        }
+
+        var tradingDeal = JsonConvert.DeserializeObject<TradingDeal>(request.Body);
+        if (tradingDeal == null)
+        {
+            response.StatusCode = StatusCodes.BadRequest;
+            response.Body = "Invalid trading deal data.";
+            return response;
+        }
+
+        if (!user.OwnsCard(tradingDeal.CardToTrade))
+        {
+            response.StatusCode = StatusCodes.Forbidden;
+            response.Body = "The deal contains a card that is not owned by the user or locked in the deck.";
+            return response;
+        }
+
+        // Set the user_id in the trading deal
+        tradingDeal.UserId = user.UserId;
+
+        if (TradingDeal.CreateTradingDeal(tradingDeal))
+        {
+            response.StatusCode = StatusCodes.Created;
+            response.Body = "Trading deal successfully created.";
+        }
+        else
+        {
+            response.StatusCode = StatusCodes.Conflict;
+            response.Body = "A deal with this deal ID already exists.";
+        }
+
+        return response;
+    } },
+                new Route
+                {
+                    Path = "/tradings/{tradingdealid}",
+                    HttpMethod = "DELETE",
+                    Action = async (request, parameters) =>
+                    {
+                        Console.WriteLine("[Debug] Handling DELETE request for /tradings/{tradingdealid}");
+                        var response = new HttpResponse();
+
+                        if (string.IsNullOrEmpty(request.Token))
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Unauthorized. Token is missing.";
+                            return response;
+                        }
+
+                        User user = User.GetUserByToken(request.Token);
+                        if (user == null)
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Invalid token.";
+                            return response;
+                        }
+
+                        if (!parameters.TryGetValue("tradingdealid", out var tradingDealIdStr) || !Guid.TryParse(tradingDealIdStr, out var tradingDealId))
+                        {
+                            response.StatusCode = StatusCodes.BadRequest;
+                            response.Body = "Invalid trading deal ID.";
+                            return response;
+                        }
+
+                        var tradingDeal = TradingDeal.GetTradingDealById(tradingDealId);
+                        if (tradingDeal == null)
+                        {
+                            response.StatusCode = StatusCodes.NotFound;
+                            response.Body = "The provided deal ID was not found.";
+                            return response;
+                        }
+
+                        if (!user.OwnsCard(tradingDeal.CardToTrade))
+                        {
+                            response.StatusCode = StatusCodes.Forbidden;
+                            response.Body = "The deal contains a card that is not owned by the user.";
+                            return response;
+                        }
+
+                        if (TradingDeal.DeleteTradingDeal(tradingDealId))
+                        {
+                            response.StatusCode = StatusCodes.Ok;
+                            response.Body = "Trading deal successfully deleted.";
+                        }
+                        else
+                        {
+                            response.StatusCode = StatusCodes.InternalServerError;
+                            response.Body = "An error occurred while deleting the trading deal.";
+                        }
+
+                        return response;
+                    }
+                },
+                new Route
+                {
+                    Path = "/tradings/{tradingdealid}",
+                    HttpMethod = "POST",
+                    Action = async (request, parameters) =>
+                    {
+                        Console.WriteLine("[Debug] Handling POST request for /tradings/{tradingdealid}");
+                        var response = new HttpResponse();
+
+                        if (string.IsNullOrEmpty(request.Token))
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Unauthorized. Token is missing.";
+                            return response;
+                        }
+
+                        User user = User.GetUserByToken(request.Token);
+                        if (user == null)
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Invalid token.";
+                            return response;
+                        }
+
+                        if (!parameters.TryGetValue("tradingdealid", out var tradingDealIdStr) || !Guid.TryParse(tradingDealIdStr, out var tradingDealId))
+                        {
+                            response.StatusCode = StatusCodes.BadRequest;
+                            response.Body = "Invalid trading deal ID.";
+                            return response;
+                        }
+
+                        var offeredCardId = JsonConvert.DeserializeObject<Guid>(request.Body);
+                        if (offeredCardId == Guid.Empty)
+                        {
+                            response.StatusCode = StatusCodes.BadRequest;
+                            response.Body = "Invalid offered card ID.";
+                            return response;
+                        }
+
+                        var tradingDeal = TradingDeal.GetTradingDealById(tradingDealId);
+                        if (tradingDeal == null)
+                        {
+                            response.StatusCode = StatusCodes.NotFound;
+                            response.Body = "The provided deal ID was not found.";
+                            return response;
+                        }
+
+                        if (user.UserId == tradingDeal.UserId)
+                        {
+                            response.StatusCode = StatusCodes.Forbidden;
+                            response.Body = "Trading with self is not allowed.";
+                            return response;
+                        }
+
+                        if (!user.OwnsCard(offeredCardId))
+                        {
+                            response.StatusCode = StatusCodes.Forbidden;
+                            response.Body = "The offered card is not owned by the user.";
+                            return response;
+                        }
+
+                        if (!tradingDeal.MeetsRequirements(offeredCardId))
+                        {
+                            response.StatusCode = StatusCodes.Forbidden;
+                            response.Body = "The offered card does not meet the requirements.";
+                            return response;
+                        }
+
+                        if (TradingDeal.ExecuteTrade(tradingDealId, user.UserId, offeredCardId))
+                        {
+                            response.StatusCode = StatusCodes.Ok;
+                            response.Body = "Trading deal successfully executed.";
+                        }
+                        else
+                        {
+                            response.StatusCode = StatusCodes.InternalServerError;
+                            response.Body = "An error occurred while executing the trading deal.";
+                        }
+
+                        return response;
+                    }
+                }
                 };
 
             return routes;

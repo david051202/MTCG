@@ -315,6 +315,21 @@ namespace MTCG.Models
             return cards;
         }
 
+        public bool OwnsCard(Guid cardId)
+        {
+            using (var conn = DatabaseHelper.GetOpenConnection())
+            {
+                var cmd = new NpgsqlCommand(
+                    "SELECT COUNT(*) FROM usercards WHERE user_id = @user_id AND card_id = @card_id",
+                    conn);
+                cmd.Parameters.AddWithValue("user_id", UserId);
+                cmd.Parameters.AddWithValue("card_id", cardId);
+
+                var count = (long)cmd.ExecuteScalar();
+                return count > 0;
+            }
+        }
+
         private static string GenerateToken(string username)
         {
             return $"{username}-mtcgToken";
