@@ -89,7 +89,7 @@ namespace MTCG.Models
                 using (var conn = DatabaseHelper.GetOpenConnection())
                 {
                     var cmd = new NpgsqlCommand(
-                        "SELECT user_id, token, coins, elo FROM users WHERE username = @username AND password = @password",
+                        "SELECT user_id, username, password FROM users WHERE username = @username AND password = @password",
                         conn);
                     cmd.Parameters.AddWithValue("username", username);
                     cmd.Parameters.AddWithValue("password", password);
@@ -98,46 +98,24 @@ namespace MTCG.Models
                     {
                         if (reader.Read())
                         {
-                            var user = new User(username, password)
+                            var user = new User
                             {
                                 UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
-                                Token = reader["token"] as string,
-                                Coins = reader.GetInt32(reader.GetOrdinal("coins")),
-                                Elo = reader.GetInt32(reader.GetOrdinal("elo"))
+                                Username = reader.GetString(reader.GetOrdinal("username")),
+                                Password = reader.GetString(reader.GetOrdinal("password"))
                             };
 
-                            // Generate a new token if none exists
-                            if (string.IsNullOrEmpty(user.Token))
-                            {
-                                user.Token = GenerateToken(username);
-                            }
-
-                            reader.Close(); // Close reader before executing a new command
-
-                            using (var updateConn = DatabaseHelper.GetOpenConnection())
-                            {
-                                var updateCmd = new NpgsqlCommand(
-                                    "UPDATE users SET token = @token WHERE user_id = @user_id",
-                                    updateConn);
-                                updateCmd.Parameters.AddWithValue("token", user.Token);
-                                updateCmd.Parameters.AddWithValue("user_id", user.UserId);
-                                updateCmd.ExecuteNonQuery();
-                            }
-
-                            // Load user's cards
-                            user.Cards = user.GetUserCards();
-
+                            // Generate a new token
+                            user.Token = GenerateToken(user.Username);
+                            // Save the token to the database
+                            user.SaveToken();
                             Console.ForegroundColor = ConsoleColor.Green;
                             Console.WriteLine("Login successful. Token generated: " + user.Token);
                             Console.ResetColor();
-
                             return user;
                         }
                         else
                         {
-                            Console.ForegroundColor = ConsoleColor.DarkRed;
-                            Console.WriteLine("Invalid username or password.");
-                            Console.ResetColor();
                             return null;
                         }
                     }
@@ -149,6 +127,7 @@ namespace MTCG.Models
                 return null;
             }
         }
+
 
         public static User GetUserByToken(string token)
         {
@@ -337,18 +316,45 @@ namespace MTCG.Models
 
         public void AddCard(Card card)
         {
-            if (card != null)
+            if (Cards == null)
             {
-                Cards.Add(card);
+                Cards = new List<Card>();
             }
+            Cards.Add(card);
         }
 
         public void RemoveCard(Card card)
         {
-            if (card != null)
+            if (Cards != null)
             {
-                Cards.Remove(card);
+                var cardToRemove = Cards.FirstOrDefault(c => c.Id == card.Id);
+                if (cardToRemove != null)
+                {
+                    Cards.Remove(cardToRemove);
+                }
+            }
+        }
+
+        public void SaveToken()
+        {
+            try
+            {
+                using (var conn = DatabaseHelper.GetOpenConnection())
+                {
+                    var cmd = new NpgsqlCommand(
+                        "UPDATE users SET token = @token WHERE user_id = @user_id",
+                        conn);
+                    cmd.Parameters.AddWithValue("token", this.Token);
+                    cmd.Parameters.AddWithValue("user_id", this.UserId);
+
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving token: {ex.Message}");
             }
         }
     }
 }
+

@@ -12,7 +12,7 @@ namespace MTCG.Classes
         private User _player2;
         private StringBuilder _battleLog;
 
-        private const int MaxRounds = 100;
+        private const int MaxRounds = 4; // Limit to 4 rounds
 
         public BattleLogic(User player1, User player2)
         {
@@ -30,6 +30,7 @@ namespace MTCG.Classes
             {
                 round++;
                 _battleLog.AppendLine($"--- Round {round} ---");
+                Console.WriteLine($"[Battle] Round {round} begins between {_player1.Username} and {_player2.Username}.");
 
                 ApplyBooster();
 
@@ -38,14 +39,22 @@ namespace MTCG.Classes
 
                 if (card1 == null || card2 == null)
                 {
+                    _battleLog.AppendLine("A player has no cards left. Ending battle.");
                     break;
                 }
+
+                // Display cards and their damage
+                _battleLog.AppendLine($"{_player1.Username} plays {card1.Name} ({card1.ElementType} {card1.CardType}) with {card1.Damage} damage.");
+                _battleLog.AppendLine($"{_player2.Username} plays {card2.Name} ({card2.ElementType} {card2.CardType}) with {card2.Damage} damage.");
 
                 int damage1 = CalculateDamage(card1, card2);
                 int damage2 = CalculateDamage(card2, card1);
 
-                _battleLog.AppendLine($"{_player1.Username} plays {card1.Name} with damage {damage1}.");
-                _battleLog.AppendLine($"{_player2.Username} plays {card2.Name} with damage {damage2}.");
+                // Display calculated damages
+                _battleLog.AppendLine($"{_player1.Username}'s {card1.Name} attacks with effective damage {damage1}.");
+                _battleLog.AppendLine($"{_player2.Username}'s {card2.Name} attacks with effective damage {damage2}.");
+
+                Console.WriteLine($"[Battle] {card1.Name} ({damage1} dmg) vs {card2.Name} ({damage2} dmg)");
 
                 if (damage1 > damage2)
                 {
@@ -63,53 +72,68 @@ namespace MTCG.Classes
                 {
                     _battleLog.AppendLine("Round is a draw. No cards are moved.");
                 }
+                Console.WriteLine($"[Battle] End of Round {round}");
+
+                // Check if any player has run out of cards
+                if (_player1.Cards.Count == 0 || _player2.Cards.Count == 0)
+                {
+                    break;
+                }
 
                 await Task.Delay(100); // Simulate async operation
             }
 
-            if (round >= MaxRounds)
+            // Determine the winner
+            if (_player1.Cards.Count == 0 && _player2.Cards.Count == 0)
             {
-                _battleLog.AppendLine("Battle ended in a draw due to round limit.");
-                // ELO remains unchanged
+                _battleLog.AppendLine("Battle ended in a draw. Both players have no remaining cards.");
+            }
+            else if (_player1.Cards.Count == 0)
+            {
+                _battleLog.AppendLine($"\nBattle concluded. Winner: {_player2.Username}");
+                UpdateStats(_player2.Username);
+            }
+            else if (_player2.Cards.Count == 0)
+            {
+                _battleLog.AppendLine($"\nBattle concluded. Winner: {_player1.Username}");
+                UpdateStats(_player1.Username);
             }
             else
             {
-                string winner = _player1.Cards.Count > _player2.Cards.Count ? _player1.Username : _player2.Username;
-                _battleLog.AppendLine($"Battle concluded. Winner: {winner}");
-                UpdateStats(winner);
-            }
+                // Battle ended due to round limit
+                string winner = _player1.Cards.Count > _player2.Cards.Count ? _player1.Username :
+                                _player2.Cards.Count > _player1.Cards.Count ? _player2.Username : null;
 
+                if (winner != null)
+                {
+                    _battleLog.AppendLine($"\nBattle concluded. Winner based on remaining cards: {winner}");
+                    UpdateStats(winner);
+                }
+                else
+                {
+                    _battleLog.AppendLine("\nBattle ended in a draw due to round limit.");
+                    UpdateDraws();
+                }
+            }
+            Console.WriteLine($"[Battle] Battle between {_player1.Username} and {_player2.Username} completed.");
             return _battleLog.ToString();
         }
 
         private Card GetRandomCard(User user)
         {
-            var random = new Random();
-            int index = random.Next(user.Cards.Count);
-            return user.Cards[index];
-        }
-
-        private int CalculateDamage(Card attacker, Card defender)
-        {
-            int baseDamage = (int)attacker.Damage; // Explicit cast from double to int
-
-            if (attacker.CardType == "spell")
+            try
             {
-                // Check element effectiveness
-                if (IsEffective(attacker.ElementType, defender.ElementType))
-                {
-                    baseDamage *= 2;
-                }
-                else if (IsNotEffective(attacker.ElementType, defender.ElementType))
-                {
-                    baseDamage /= 2;
-                }
+                if (user.Cards == null || user.Cards.Count == 0)
+                    return null;
+
+                int index = _random.Next(user.Cards.Count);
+                return user.Cards[index];
             }
-
-            // Apply specialties
-            baseDamage = ApplySpecialties(attacker, defender, baseDamage);
-
-            return baseDamage;
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Error] Exception in GetRandomCard: {ex.Message}");
+                return null;
+            }
         }
 
         private bool IsEffective(string attackerElement, string defenderElement)
@@ -126,6 +150,38 @@ namespace MTCG.Classes
                    (attackerElement == "water" && defenderElement == "normal");
         }
 
+        private const int MaxDamage = 1000; // Define a reasonable maximum damage
+
+        private int CalculateDamage(Card attacker, Card defender)
+        {
+            int baseDamage = (int)Math.Clamp(attacker.Damage, 0, MaxDamage); // Clamp damage to [0, MaxDamage]
+
+            bool isSpell = attacker.CardType.Equals("spell", StringComparison.OrdinalIgnoreCase);
+
+            if (isSpell)
+            {
+                // Check element effectiveness
+                if (IsEffective(attacker.ElementType, defender.ElementType))
+                {
+                    _battleLog.AppendLine($"{attacker.ElementType} {attacker.CardType} is effective against {defender.ElementType} {defender.CardType}. Damage doubled.");
+                    baseDamage *= 2;
+                }
+                else if (IsNotEffective(attacker.ElementType, defender.ElementType))
+                {
+                    _battleLog.AppendLine($"{attacker.ElementType} {attacker.CardType} is not effective against {defender.ElementType} {defender.CardType}. Damage halved.");
+                    baseDamage /= 2;
+                }
+            }
+
+            // Apply specialties
+            baseDamage = ApplySpecialties(attacker, defender, baseDamage);
+
+            // Ensure damage does not exceed MaxDamage after specialties
+            baseDamage = Math.Clamp(baseDamage, 0, MaxDamage);
+
+            return baseDamage;
+        }
+
         private int ApplySpecialties(Card attacker, Card defender, int damage)
         {
             // Implement specialties
@@ -137,14 +193,14 @@ namespace MTCG.Classes
             if (attacker.Name.Equals("Wizard", StringComparison.OrdinalIgnoreCase) && defender.Name.Equals("Ork", StringComparison.OrdinalIgnoreCase))
             {
                 _battleLog.AppendLine("Wizard controls Ork. Ork cannot damage Wizard.");
-                return damage;
+                return MaxDamage; // Wizard wins
             }
             if (defender.Name.Equals("Knight", StringComparison.OrdinalIgnoreCase) && attacker.Name.Equals("WaterSpell", StringComparison.OrdinalIgnoreCase))
             {
                 _battleLog.AppendLine("Knight's heavy armor is drowned by WaterSpell instantly.");
-                return int.MaxValue;
+                return MaxDamage; // Represents instant defeat
             }
-            if (defender.Name.Equals("Kraken", StringComparison.OrdinalIgnoreCase) && attacker.CardType == "spell")
+            if (defender.Name.Equals("Kraken", StringComparison.OrdinalIgnoreCase) && attacker.CardType.Equals("Spell", StringComparison.OrdinalIgnoreCase))
             {
                 _battleLog.AppendLine("Kraken is immune against spells.");
                 return 0;
@@ -152,7 +208,7 @@ namespace MTCG.Classes
             if (attacker.Name.Equals("FireElf", StringComparison.OrdinalIgnoreCase) && defender.Name.Equals("Dragon", StringComparison.OrdinalIgnoreCase))
             {
                 _battleLog.AppendLine("FireElf evades Dragon's attack.");
-                return 0;
+                return MaxDamage; // FireElf wins
             }
 
             return damage;
@@ -160,38 +216,71 @@ namespace MTCG.Classes
 
         private void UpdateStats(string winnerUsername)
         {
-            User winner = User.GetUserByUsername(winnerUsername);
-            User loser = winnerUsername == _player1.Username ? _player2 : _player1;
+            User winner = null;
+            User loser = null;
 
-            winner.Stats.GamesPlayed += 1;
-            winner.Stats.Wins += 1;
-            loser.Stats.GamesPlayed += 1;
-            loser.Stats.Losses += 1;
+            if (winnerUsername == _player1.Username)
+            {
+                winner = _player1;
+                loser = _player2;
+            }
+            else if (winnerUsername == _player2.Username)
+            {
+                winner = _player2;
+                loser = _player1;
+            }
 
-            // Simple ELO calculation example
-            int kFactor = 32;
-            double expectedWinner = 1;
-            double expectedLoser = 0;
+            if (winner != null && loser != null)
+            {
+                // Winner statistics
+                winner.Stats.Wins += 1;
+                winner.Stats.Elo += 10;
 
-            winner.Stats.Elo += (int)(kFactor * (1 - expectedWinner));
-            loser.Stats.Elo += (int)(kFactor * (0 - expectedLoser));
+                // Loser statistics
+                loser.Stats.Losses += 1;
+                loser.Stats.Elo = Math.Max(loser.Stats.Elo - 5, 0); // Ensure Elo doesn't go negative
 
-            Console.WriteLine($"[Stats] {winner.Username} Elo: {winner.Stats.Elo}, {loser.Username} Elo: {loser.Stats.Elo}");
+                // Update statistics in the database
+                winner.Stats.UpdateStats(winner.Stats.Elo, winner.Stats.Wins, winner.Stats.Losses, winner.Stats.Draws);
+                loser.Stats.UpdateStats(loser.Stats.Elo, loser.Stats.Wins, loser.Stats.Losses, loser.Stats.Draws);
+
+                Console.WriteLine($"[Stats] Updated stats for {winner.Username} (Wins: {winner.Stats.Wins}, Elo: {winner.Stats.Elo}) and {loser.Username} (Losses: {loser.Stats.Losses}, Elo: {loser.Stats.Elo})");
+            }
         }
 
-        // Unique Feature: Booster that doubles the damage of a random card for one round
+        private void UpdateDraws()
+        {
+            _player1.Stats.Draws += 1;
+            _player2.Stats.Draws += 1;
+
+            // Update statistics in the database
+            _player1.Stats.UpdateStats(_player1.Stats.Elo, _player1.Stats.Wins, _player1.Stats.Losses, _player1.Stats.Draws);
+            _player2.Stats.UpdateStats(_player2.Stats.Elo, _player2.Stats.Wins, _player2.Stats.Losses, _player2.Stats.Draws);
+
+            Console.WriteLine($"[Stats] Updated stats for {_player1.Username} and {_player2.Username} (Draws: {_player1.Stats.Draws}, {_player2.Stats.Draws})");
+        }
+
+        private static readonly Random _random = new Random(); // Use a single Random instance
+
+        // Unique Feature: Double Strike Booster that allows a card to attack twice in one round
         private void ApplyBooster()
         {
-            var random = new Random();
             if (_player1.Cards.Count > 0 && _player2.Cards.Count > 0)
             {
-                int playerIndex = random.Next(2);
-                User selectedPlayer = playerIndex == 0 ? _player1 : _player2;
-                int cardIndex = random.Next(selectedPlayer.Cards.Count);
-                selectedPlayer.Cards[cardIndex].Damage = Math.Min(selectedPlayer.Cards[cardIndex].Damage * 2, double.MaxValue);
-                _battleLog.AppendLine($"{selectedPlayer.Username} received a booster! {selectedPlayer.Cards[cardIndex].Name}'s damage is doubled for this round.");
+                int boosterChance = _random.Next(100); // 20% chance to receive a booster
+                if (boosterChance < 20)
+                {
+                    // Randomly select which player receives the booster
+                    User selectedPlayer = _random.Next(2) == 0 ? _player1 : _player2;
+                    Card selectedCard = GetRandomCard(selectedPlayer);
+
+                    if (selectedCard != null)
+                    {
+                        selectedCard.Damage = Math.Min(selectedCard.Damage * 2, MaxDamage); // Double the damage with cap
+                        _battleLog.AppendLine($"{selectedPlayer.Username} received a Double Strike booster! {selectedCard.Name}'s damage is doubled for this round.");
+                    }
+                }
             }
         }
     }
 }
-

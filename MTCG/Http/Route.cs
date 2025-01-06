@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using MTCG.Classes;
+using MTCG.Battle;
 using MTCG.Models;
 using Newtonsoft.Json;
 
@@ -95,7 +96,8 @@ namespace MTCG.Http
                         }
                         return response;
                     }
-                },
+                }
+,
                 new Route
                 {
                     Path = "/packages",
@@ -160,55 +162,55 @@ namespace MTCG.Http
                     }
                 },
                 new Route
-{
-    Path = "/transactions/packages",
-    HttpMethod = "POST",
-    Action = async (request, parameters) =>
-    {
-        Console.WriteLine("[Debug] Handling POST request for /transactions/packages");
-        var response = new HttpResponse();
+                {
+                    Path = "/transactions/packages",
+                    HttpMethod = "POST",
+                    Action = async (request, parameters) =>
+                    {
+                        Console.WriteLine("[Debug] Handling POST request for /transactions/packages");
+                        var response = new HttpResponse();
 
-        if (string.IsNullOrEmpty(request.Token))
-        {
-            response.StatusCode = StatusCodes.Unauthorized;
-            response.Body = "Unauthorized. Token is missing.";
-            return response;
-        }
+                        if (string.IsNullOrEmpty(request.Token))
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Unauthorized. Token is missing.";
+                            return response;
+                        }
 
-        User user = User.GetUserByToken(request.Token);
-        if (user == null)
-        {
-            response.StatusCode = StatusCodes.Unauthorized;
-            response.Body = "Invalid token.";
-            return response;
-        }
+                        User user = User.GetUserByToken(request.Token);
+                        if (user == null)
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Invalid token.";
+                            return response;
+                        }
 
-        var result = Package.BuyPackage(user);
+                        var result = Package.BuyPackage(user);
 
-        if (result == Package.BuyResult.NoPackageAvailable)
-        {
-            response.StatusCode = StatusCodes.NotFound;
-            response.Body = "No card package available for buying.";
-        }
-        else if (result == Package.BuyResult.NotEnoughCoins)
-        {
-            response.StatusCode = StatusCodes.Forbidden;
-            response.Body = "Not enough money for buying a card package.";
-        }
-        else if (result == Package.BuyResult.Success)
-        {
-            response.StatusCode = StatusCodes.Ok;
-            response.Body = JsonConvert.SerializeObject(user.Cards);
-        }
-        else
-        {
-            response.StatusCode = StatusCodes.InternalServerError;
-            response.Body = "An error occurred while processing your request.";
-        }
+                        if (result == Package.BuyResult.NoPackageAvailable)
+                        {
+                            response.StatusCode = StatusCodes.NotFound;
+                            response.Body = "No card package available for buying.";
+                        }
+                        else if (result == Package.BuyResult.NotEnoughCoins)
+                        {
+                            response.StatusCode = StatusCodes.Forbidden;
+                            response.Body = "Not enough money for buying a card package.";
+                        }
+                        else if (result == Package.BuyResult.Success)
+                        {
+                            response.StatusCode = StatusCodes.Ok;
+                            response.Body = JsonConvert.SerializeObject(user.Cards);
+                        }
+                        else
+                        {
+                            response.StatusCode = StatusCodes.InternalServerError;
+                            response.Body = "An error occurred while processing your request.";
+                        }
 
-        return response;
-    }
-},
+                        return response;
+                    }
+                },
                 new Route
                 {
                     Path = "/cards",
@@ -240,7 +242,7 @@ namespace MTCG.Http
                             return response;
                         }
 
-                        // Karten in der Konsole ausgeben
+                        // Output cards to the console
                         Console.WriteLine($"[Server] User {user.Username} has the following cards:");
                         foreach (var card in user.Cards)
                         {
@@ -531,7 +533,7 @@ namespace MTCG.Http
                         {
                             Console.WriteLine($"[Server] Retrieved stats for user: {user.Username}\n");
 
-                            Console.WriteLine("{0,-10} {1,-10}", "Attribute", "Wert");
+                            Console.WriteLine("{0,-10} {1,-10}", "Attribute", "Value");
                             Console.WriteLine(new string('-', 20));
 
                             Console.WriteLine("{0,-10} {1,-10}", "Elo", stats.Elo);
@@ -593,7 +595,6 @@ namespace MTCG.Http
                             response.StatusCode = StatusCodes.Ok;
                             response.Body = JsonConvert.SerializeObject(scoreboard, Formatting.Indented);
                         }
-
                         else
                         {
                             response.StatusCode = StatusCodes.InternalServerError;
@@ -604,46 +605,84 @@ namespace MTCG.Http
                     }
                 },
                 new Route
+                {
+                    Path = "/battles",
+                    HttpMethod = "POST",
+                    Action = async (request, parameters) =>
                     {
-                        Path = "/battles",
-                        HttpMethod = "POST",
-                        Action = async (request, parameters) =>
+                        Console.WriteLine("[Debug] Handling POST request for /battles");
+                        var response = new HttpResponse();
+
+                        if (string.IsNullOrEmpty(request.Token))
                         {
-                            Console.WriteLine("[Debug] Handling POST request for /battles");
-                            var response = new HttpResponse();
-
-                            if (string.IsNullOrEmpty(request.Token))
-                            {
-                                response.StatusCode = StatusCodes.Unauthorized;
-                                response.Body = "Unauthorized. Token is missing.";
-                                return response;
-                            }
-
-                            User user = User.GetUserByToken(request.Token);
-                            if (user == null)
-                            {
-                                response.StatusCode = StatusCodes.Unauthorized;
-                                response.Body = "Invalid token.";
-                                return response;
-                            }
-
-                            // Initiate battle
-                            string battleLog = await BattleManager.Instance.InitiateBattleAsync(user);
-
-                            if (!string.IsNullOrEmpty(battleLog))
-                            {
-                                response.StatusCode = StatusCodes.Ok;
-                                response.Body = battleLog;
-                            }
-                            else
-                            {
-                                response.StatusCode = StatusCodes.InternalServerError;
-                                response.Body = "An error occurred while initiating the battle.";
-                            }
-
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Unauthorized. Token is missing.";
                             return response;
                         }
-                    },
+
+                        User user = User.GetUserByToken(request.Token);
+                        if (user == null)
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Invalid token.";
+                            return response;
+                        }
+
+                        var deck = Deck.GetDeckByUserId(user.UserId);
+                        if (deck == null || deck.Cards.Count < 4)
+                        {
+                            response.StatusCode = StatusCodes.BadRequest;
+                            response.Body = "Deck is not properly configured. Please configure a deck with at least 4 cards.";
+                            return response;
+                        }
+
+                        BattleManager.Instance.AddUserToLobby(user);
+
+                        response.StatusCode = StatusCodes.Accepted;
+                        response.Body = "You have been added to the battle queue.";
+                        return response;
+                    }
+                },
+                new Route
+                {
+                    Path = "/battles/results",
+                    HttpMethod = "GET",
+                    Action = async (request, parameters) =>
+                    {
+                        Console.WriteLine("[Debug] Handling GET request for /battles/results");
+                        var response = new HttpResponse();
+
+                        if (string.IsNullOrEmpty(request.Token))
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Unauthorized. Token is missing.";
+                            return response;
+                        }
+
+                        User user = User.GetUserByToken(request.Token);
+                        if (user == null)
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Invalid token.";
+                            return response;
+                        }
+
+                        string battleResult = BattleManager.Instance.GetBattleResult(user.UserId);
+
+                        if (!string.IsNullOrEmpty(battleResult))
+                        {
+                            response.StatusCode = StatusCodes.Ok;
+                            response.Body = battleResult;
+                        }
+                        else
+                        {
+                            response.StatusCode = StatusCodes.NoContent;
+                            response.Body = "No battle result available yet.";
+                        }
+
+                        return response;
+                    }
+                },
                 new Route
                 {
                     Path = "/tradings",
@@ -684,59 +723,59 @@ namespace MTCG.Http
                 },
                 new Route
                 {
-                     Path = "/tradings",
-    HttpMethod = "POST",
-    Action = async (request, parameters) =>
-    {
-        Console.WriteLine("[Debug] Handling POST request for /tradings");
-        var response = new HttpResponse();
+                    Path = "/tradings",
+                    HttpMethod = "POST",
+                    Action = async (request, parameters) =>
+                    {
+                        Console.WriteLine("[Debug] Handling POST request for /tradings");
+                        var response = new HttpResponse();
 
-        if (string.IsNullOrEmpty(request.Token))
-        {
-            response.StatusCode = StatusCodes.Unauthorized;
-            response.Body = "Unauthorized. Token is missing.";
-            return response;
-        }
+                        if (string.IsNullOrEmpty(request.Token))
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Unauthorized. Token is missing.";
+                            return response;
+                        }
 
-        User user = User.GetUserByToken(request.Token);
-        if (user == null)
-        {
-            response.StatusCode = StatusCodes.Unauthorized;
-            response.Body = "Invalid token.";
-            return response;
-        }
+                        User user = User.GetUserByToken(request.Token);
+                        if (user == null)
+                        {
+                            response.StatusCode = StatusCodes.Unauthorized;
+                            response.Body = "Invalid token.";
+                            return response;
+                        }
 
-        var tradingDeal = JsonConvert.DeserializeObject<TradingDeal>(request.Body);
-        if (tradingDeal == null)
-        {
-            response.StatusCode = StatusCodes.BadRequest;
-            response.Body = "Invalid trading deal data.";
-            return response;
-        }
+                        var tradingDeal = JsonConvert.DeserializeObject<TradingDeal>(request.Body);
+                        if (tradingDeal == null)
+                        {
+                            response.StatusCode = StatusCodes.BadRequest;
+                            response.Body = "Invalid trading deal data.";
+                            return response;
+                        }
 
-        if (!user.OwnsCard(tradingDeal.CardToTrade))
-        {
-            response.StatusCode = StatusCodes.Forbidden;
-            response.Body = "The deal contains a card that is not owned by the user or locked in the deck.";
-            return response;
-        }
+                        if (!user.OwnsCard(tradingDeal.CardToTrade))
+                        {
+                            response.StatusCode = StatusCodes.Forbidden;
+                            response.Body = "The deal contains a card that is not owned by the user or locked in the deck.";
+                            return response;
+                        }
 
-        // Set the user_id in the trading deal
-        tradingDeal.UserId = user.UserId;
+                        tradingDeal.UserId = user.UserId;
 
-        if (TradingDeal.CreateTradingDeal(tradingDeal))
-        {
-            response.StatusCode = StatusCodes.Created;
-            response.Body = "Trading deal successfully created.";
-        }
-        else
-        {
-            response.StatusCode = StatusCodes.Conflict;
-            response.Body = "A deal with this deal ID already exists.";
-        }
+                        if (TradingDeal.CreateTradingDeal(tradingDeal))
+                        {
+                            response.StatusCode = StatusCodes.Created;
+                            response.Body = "Trading deal successfully created.";
+                        }
+                        else
+                        {
+                            response.StatusCode = StatusCodes.Conflict;
+                            response.Body = "A deal with this deal ID already exists.";
+                        }
 
-        return response;
-    } },
+                        return response;
+                    }
+                },
                 new Route
                 {
                     Path = "/tradings/{tradingdealid}",
@@ -879,9 +918,14 @@ namespace MTCG.Http
                         return response;
                     }
                 }
-                };
+            };
 
             return routes;
+        }
+
+        private static string GenerateToken(string username)
+        {
+            return $"{username}-mtcgToken";
         }
 
         private static bool TryGetQueryParameter(string path, string key, out string value)

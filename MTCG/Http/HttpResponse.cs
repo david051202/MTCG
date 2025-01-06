@@ -19,6 +19,3 @@ namespace MTCG.Http
         }
     }
 }
-
-
-

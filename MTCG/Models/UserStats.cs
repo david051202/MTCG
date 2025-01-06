@@ -66,7 +66,9 @@ namespace MTCG.Models
                     cmd.Parameters.AddWithValue("draws", draws);
                     cmd.Parameters.AddWithValue("user_id", UserId);
 
-                    return cmd.ExecuteNonQuery() > 0;
+                    int rowsAffected = cmd.ExecuteNonQuery();
+                    Console.WriteLine($"[Debug] {rowsAffected} rows updated for user {UserId}.");
+                    return rowsAffected > 0;
                 }
             }
             catch (Exception ex)

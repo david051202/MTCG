@@ -90,6 +90,16 @@ namespace MTCG.Http
             catch (Exception ex)
             {
                 Console.WriteLine($"[Server] Error while handling client: {ex.Message}");
+
+                // Send a 500 Internal Server Error response
+                var errorResponse = new HttpResponse
+                {
+                    StatusCode = StatusCodes.InternalServerError,
+                    Body = $"Internal Server Error: {ex.Message}"
+                };
+
+                var client = new HttpClient(connection);
+                await client.SendResponseAsync(errorResponse);
             }
             finally
             {
