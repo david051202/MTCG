@@ -50,7 +50,6 @@ namespace MTCG.Http
                     HttpMethod = "POST",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling POST request for /users");
                         var response = new HttpResponse();
                         User newUser = JsonConvert.DeserializeObject<User>(request.Body);
                         if (newUser != null && newUser.CreateUser())
@@ -72,7 +71,6 @@ namespace MTCG.Http
                     HttpMethod = "POST",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling POST request for /sessions");
                         var response = new HttpResponse();
                         User loginUser = JsonConvert.DeserializeObject<User>(request.Body);
                         if (loginUser != null)
@@ -104,7 +102,6 @@ namespace MTCG.Http
                     HttpMethod = "POST",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling POST request for /packages");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -167,7 +164,6 @@ namespace MTCG.Http
                     HttpMethod = "POST",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling POST request for /transactions/packages");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -217,7 +213,6 @@ namespace MTCG.Http
                     HttpMethod = "GET",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling GET request for /cards");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -260,7 +255,6 @@ namespace MTCG.Http
                     HttpMethod = "GET",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling GET request for /deck");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -324,7 +318,6 @@ namespace MTCG.Http
                     HttpMethod = "PUT",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling PUT request for /deck");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -384,13 +377,10 @@ namespace MTCG.Http
                     {
                         var response = new HttpResponse();
 
-                        Console.WriteLine("[Debug] Handling GET request for /users/{username}");
-
                         if (string.IsNullOrEmpty(request.Token))
                         {
                             response.StatusCode = StatusCodes.Unauthorized;
                             response.Body = "Unauthorized. Token is missing.";
-                            Console.WriteLine("[Debug] Unauthorized. Token is missing.");
                             return response;
                         }
 
@@ -399,19 +389,16 @@ namespace MTCG.Http
                         {
                             response.StatusCode = StatusCodes.Unauthorized;
                             response.Body = "Invalid token.";
-                            Console.WriteLine("[Debug] Invalid token.");
                             return response;
                         }
 
                         string username = parameters["username"];
-                        Console.WriteLine($"[Debug] Extracted username: {username}");
 
                         User user = User.GetUserByUsername(username);
                         if (user == null)
                         {
                             response.StatusCode = StatusCodes.NotFound;
                             response.Body = "User not found.";
-                            Console.WriteLine("[Debug] User not found.");
                             return response;
                         }
 
@@ -419,7 +406,6 @@ namespace MTCG.Http
                         {
                             response.StatusCode = StatusCodes.Forbidden;
                             response.Body = "You are not authorized to view this user's data.";
-                            Console.WriteLine("[Debug] Forbidden. Not authorized to view this user's data.");
                             return response;
                         }
 
@@ -437,7 +423,6 @@ namespace MTCG.Http
 
                         response.StatusCode = StatusCodes.Ok;
                         response.Body = JsonConvert.SerializeObject(userData, Formatting.Indented);
-                        Console.WriteLine("[Debug] User data and stats retrieved successfully.");
                         return response;
                     }
                 },
@@ -447,7 +432,6 @@ namespace MTCG.Http
                     HttpMethod = "PUT",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling PUT request for /users/{username}");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -509,7 +493,6 @@ namespace MTCG.Http
                     HttpMethod = "GET",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling GET request for /stats");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -559,7 +542,6 @@ namespace MTCG.Http
                     HttpMethod = "GET",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling GET request for /scoreboard");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -610,7 +592,6 @@ namespace MTCG.Http
                     HttpMethod = "POST",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling POST request for /battles");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -649,7 +630,6 @@ namespace MTCG.Http
                     HttpMethod = "GET",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling GET request for /battles/results");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -689,7 +669,6 @@ namespace MTCG.Http
                     HttpMethod = "GET",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling GET request for /tradings");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -727,7 +706,6 @@ namespace MTCG.Http
                     HttpMethod = "POST",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling POST request for /tradings");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -782,7 +760,6 @@ namespace MTCG.Http
                     HttpMethod = "DELETE",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling DELETE request for /tradings/{tradingdealid}");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))
@@ -842,7 +819,6 @@ namespace MTCG.Http
                     HttpMethod = "POST",
                     Action = async (request, parameters) =>
                     {
-                        Console.WriteLine("[Debug] Handling POST request for /tradings/{tradingdealid}");
                         var response = new HttpResponse();
 
                         if (string.IsNullOrEmpty(request.Token))

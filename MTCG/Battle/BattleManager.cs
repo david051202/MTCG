@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using MTCG.Models;
+using MTCG.Classes; // Namespace für BattleLogic
 
 namespace MTCG.Battle
 {
@@ -55,7 +55,7 @@ namespace MTCG.Battle
             try
             {
                 var battleLogic = new BattleLogic(player1, player2);
-                BattleOutcome outcome = await battleLogic.StartBattleAsync();
+                var outcome = await battleLogic.StartBattleAsync();
 
                 // Update Battle Results
                 _battleResults[player1.UserId] = outcome.Log;
@@ -64,7 +64,10 @@ namespace MTCG.Battle
                 Console.WriteLine($"[Battle] Battle between {player1.Username} and {player2.Username} completed.");
 
                 // Update User Stats based on Battle Outcome
-                UpdateUserStats(outcome);
+                if (outcome.Winner != null && outcome.Loser != null)
+                {
+                    UpdateUserStats(outcome);
+                }
             }
             catch (Exception ex)
             {
@@ -73,7 +76,7 @@ namespace MTCG.Battle
             }
         }
 
-        private void UpdateUserStats(BattleOutcome outcome)
+        private void UpdateUserStats(BattleLogic.BattleOutcome outcome)
         {
             try
             {
@@ -131,61 +134,6 @@ namespace MTCG.Battle
                 return result;
             }
             return null;
-        }
-    }
-
-    // Assuming a BattleOutcome class exists
-    public class BattleOutcome
-    {
-        public User Winner { get; set; }
-        public User Loser { get; set; }
-        public string Log { get; set; }
-    }
-
-    // Placeholder for BattleLogic class
-    public class BattleLogic
-    {
-        private readonly User _player1;
-        private readonly User _player2;
-        private readonly Random _random;
-
-        public BattleLogic(User player1, User player2)
-        {
-            _player1 = player1;
-            _player2 = player2;
-            _random = new Random();
-        }
-
-        public async Task<BattleOutcome> StartBattleAsync()
-        {
-            int maxRounds = _random.Next(1, 101); // 1 to 100 inclusive
-            int currentRound = 0;
-
-            // Simulate battle rounds
-            while (currentRound < maxRounds)
-            {
-                currentRound++;
-                Console.WriteLine($"[Battle] Round {currentRound} begins between {_player1.Username} and {_player2.Username}.");
-
-                // Simulate battle logic here (e.g., card interactions)
-
-                Console.WriteLine($"[Battle] End of Round {currentRound}");
-            }
-
-            // Determine winner randomly for demonstration
-            bool player1Wins = _random.Next(0, 2) == 0;
-            User winner = player1Wins ? _player1 : _player2;
-            User loser = player1Wins ? _player2 : _player1;
-            string battleLog = $"Battle between {winner.Username} and {loser.Username} completed. Winner: {winner.Username}.";
-
-            Console.WriteLine($"[Battle] {battleLog}");
-
-            return new BattleOutcome
-            {
-                Winner = winner,
-                Loser = loser,
-                Log = battleLog
-            };
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MTCG.Models;
@@ -12,16 +13,38 @@ namespace MTCG.Classes
         private User _player2;
         private StringBuilder _battleLog;
 
-        private const int MaxRounds = 4; // Limit to 4 rounds
+        private const int MaxRounds = 100; // Limit to 100 rounds
 
         public BattleLogic(User player1, User player2)
         {
-            _player1 = player1;
-            _player2 = player2;
             _battleLog = new StringBuilder();
+
+            // Limit deck to 4 cards
+            _player1 = PreparePlayer(player1);
+            _player2 = PreparePlayer(player2);
         }
 
-        public async Task<string> StartBattleAsync()
+        private User PreparePlayer(User player)
+        {
+            // Ensure the player has exactly 4 cards
+            if (player.Cards.Count > 4)
+            {
+                player.Cards = GetRandomCards(player.Cards, 4);
+            }
+            else if (player.Cards.Count < 4)
+            {
+                throw new InvalidOperationException($"Player {player.Username} does not have enough cards to start a battle.");
+            }
+
+            return player;
+        }
+
+        private List<Card> GetRandomCards(List<Card> cards, int count)
+        {
+            return cards.OrderBy(x => _random.Next()).Take(count).ToList();
+        }
+
+        public async Task<BattleOutcome> StartBattleAsync()
         {
             _battleLog.AppendLine($"Battle started between {_player1.Username} and {_player2.Username}.\n");
 
@@ -43,80 +66,89 @@ namespace MTCG.Classes
                     break;
                 }
 
-                // Display cards and their damage
+                // Round breakdown
+                _battleLog.AppendLine("**Card Selection:**");
                 _battleLog.AppendLine($"{_player1.Username} plays {card1.Name} ({card1.ElementType} {card1.CardType}) with {card1.Damage} damage.");
                 _battleLog.AppendLine($"{_player2.Username} plays {card2.Name} ({card2.ElementType} {card2.CardType}) with {card2.Damage} damage.");
+                _battleLog.AppendLine("**Damage Calculation:**");
 
                 int damage1 = CalculateDamage(card1, card2);
                 int damage2 = CalculateDamage(card2, card1);
 
                 // Display calculated damages
-                _battleLog.AppendLine($"{_player1.Username}'s {card1.Name} attacks with effective damage {damage1}.");
-                _battleLog.AppendLine($"{_player2.Username}'s {card2.Name} attacks with effective damage {damage2}.");
+                _battleLog.AppendLine($"{_player1.Username}'s {card1.Name} attacks with effective damage of {damage1}.");
+                _battleLog.AppendLine($"{_player2.Username}'s {card2.Name} attacks with effective damage of {damage2}.");
 
                 Console.WriteLine($"[Battle] {card1.Name} ({damage1} dmg) vs {card2.Name} ({damage2} dmg)");
 
+                string roundWinner = string.Empty;
+
+                // Determine round winner
                 if (damage1 > damage2)
                 {
-                    _battleLog.AppendLine($"{_player1.Username}'s {card1.Name} wins the round.");
+                    roundWinner = _player1.Username;
                     _player2.RemoveCard(card2);
                     _player1.AddCard(card2);
                 }
                 else if (damage2 > damage1)
                 {
-                    _battleLog.AppendLine($"{_player2.Username}'s {card2.Name} wins the round.");
+                    roundWinner = _player2.Username;
                     _player1.RemoveCard(card1);
                     _player2.AddCard(card1);
                 }
+
+                // End of round and add round winner
+                _battleLog.AppendLine($"[Battle] End of Round {round}");
+                Console.WriteLine($"[Battle] End of Round {round}");
+                if (!string.IsNullOrEmpty(roundWinner))
+                {
+                    _battleLog.AppendLine($"[Battle] **Round Winner:** {roundWinner}\n");
+                    Console.WriteLine($"[Battle] Round Winner: {roundWinner}\n");
+                }
                 else
                 {
-                    _battleLog.AppendLine("Round is a draw. No cards are moved.");
-                }
-                Console.WriteLine($"[Battle] End of Round {round}");
-
-                // Check if any player has run out of cards
-                if (_player1.Cards.Count == 0 || _player2.Cards.Count == 0)
-                {
-                    break;
+                    _battleLog.AppendLine($"[Battle] **Round {round} was a draw.** No cards were moved.\n");
+                    Console.WriteLine($"[Battle] Round {round} was a draw.\n");
                 }
 
                 await Task.Delay(100); // Simulate async operation
             }
 
-            // Determine the winner
+            // Determine overall winner
+            User winner = null;
+            User loser = null;
+
             if (_player1.Cards.Count == 0 && _player2.Cards.Count == 0)
             {
-                _battleLog.AppendLine("Battle ended in a draw. Both players have no remaining cards.");
+                _battleLog.AppendLine("\nBattle ended in a draw. Both players have no remaining cards.");
+                UpdateDraws();
             }
             else if (_player1.Cards.Count == 0)
             {
-                _battleLog.AppendLine($"\nBattle concluded. Winner: {_player2.Username}");
-                UpdateStats(_player2.Username);
+                winner = _player2;
+                loser = _player1;
+                _battleLog.AppendLine($"\nBattle concluded. Winner: {winner.Username}");
             }
             else if (_player2.Cards.Count == 0)
             {
-                _battleLog.AppendLine($"\nBattle concluded. Winner: {_player1.Username}");
-                UpdateStats(_player1.Username);
+                winner = _player1;
+                loser = _player2;
+                _battleLog.AppendLine($"\nBattle concluded. Winner: {winner.Username}");
             }
-            else
+            else if (round >= MaxRounds)
             {
-                // Battle ended due to round limit
-                string winner = _player1.Cards.Count > _player2.Cards.Count ? _player1.Username :
-                                _player2.Cards.Count > _player1.Cards.Count ? _player2.Username : null;
-
-                if (winner != null)
-                {
-                    _battleLog.AppendLine($"\nBattle concluded. Winner based on remaining cards: {winner}");
-                    UpdateStats(winner);
-                }
-                else
-                {
-                    _battleLog.AppendLine("\nBattle ended in a draw due to round limit.");
-                    UpdateDraws();
-                }
+                _battleLog.AppendLine("\nBattle ended in a draw due to maximum rounds reached.");
+                UpdateDraws();
             }
+
             Console.WriteLine($"[Battle] Battle between {_player1.Username} and {_player2.Username} completed.");
-            return _battleLog.ToString();
+
+            return new BattleOutcome
+            {
+                Winner = winner,
+                Loser = loser,
+                Log = _battleLog.ToString()
+            };
         }
 
         private Card GetRandomCard(User user)
@@ -214,40 +246,6 @@ namespace MTCG.Classes
             return damage;
         }
 
-        private void UpdateStats(string winnerUsername)
-        {
-            User winner = null;
-            User loser = null;
-
-            if (winnerUsername == _player1.Username)
-            {
-                winner = _player1;
-                loser = _player2;
-            }
-            else if (winnerUsername == _player2.Username)
-            {
-                winner = _player2;
-                loser = _player1;
-            }
-
-            if (winner != null && loser != null)
-            {
-                // Winner statistics
-                winner.Stats.Wins += 1;
-                winner.Stats.Elo += 10;
-
-                // Loser statistics
-                loser.Stats.Losses += 1;
-                loser.Stats.Elo = Math.Max(loser.Stats.Elo - 5, 0); // Ensure Elo doesn't go negative
-
-                // Update statistics in the database
-                winner.Stats.UpdateStats(winner.Stats.Elo, winner.Stats.Wins, winner.Stats.Losses, winner.Stats.Draws);
-                loser.Stats.UpdateStats(loser.Stats.Elo, loser.Stats.Wins, loser.Stats.Losses, loser.Stats.Draws);
-
-                Console.WriteLine($"[Stats] Updated stats for {winner.Username} (Wins: {winner.Stats.Wins}, Elo: {winner.Stats.Elo}) and {loser.Username} (Losses: {loser.Stats.Losses}, Elo: {loser.Stats.Elo})");
-            }
-        }
-
         private void UpdateDraws()
         {
             _player1.Stats.Draws += 1;
@@ -281,6 +279,13 @@ namespace MTCG.Classes
                     }
                 }
             }
+        }
+
+        public class BattleOutcome
+        {
+            public User Winner { get; set; }
+            public User Loser { get; set; }
+            public string Log { get; set; }
         }
     }
 }
