@@ -92,6 +92,16 @@ Das Monster Trading Cards Game (MTCG) ist eine REST-basierte Serveranwendung, di
 
 **Gesamtstunden: 81 Stunden**
 
+## Einzigartiges Feature
+Ein einzigartiges Feature, das in dieses Projekt integriert wurde, ist der "Double Strike Booster". Dieser Booster ermöglicht es einer Karte, in einer Runde zweimal anzugreifen. Es gibt eine 20%ige Chance, dass ein Spieler diesen Booster erhält, und die ausgewählte Karte hat dann für diese Runde doppelten Schaden.
+
+## Lessons Learned
+Während der Entwicklung dieses Projekts haben wir mehrere wichtige Lektionen gelernt:
+- Die Bedeutung einer klaren und modularen Architektur, um die Wartbarkeit und Erweiterbarkeit des Codes zu gewährleisten.
+- Die Notwendigkeit umfassender Unit-Tests, um die Zuverlässigkeit und Korrektheit der Anwendung sicherzustellen.
+- Die Herausforderungen und Best Practices bei der Implementierung eines benutzerdefinierten HTTP-Servers ohne Hilfsframeworks.
+- Die Bedeutung der Dokumentation und der Protokollierung des Entwicklungsprozesses, um ein klares Verständnis der Designentscheidungen und Implementierungsschritte zu vermitteln.
+
 ## Fazit
 Das MTCG-Projekt implementiert erfolgreich einen REST-basierten Server zur Verwaltung und zum Kämpfen mit Sammelkarten. Die Anwendung umfasst umfassende Funktionen zur Benutzerverwaltung, zum Erwerb von Karten, zur Deckverwaltung, zu Kämpfen, zum Tauschen und zur Anzeige einer Bestenliste. Das Projekt wurde gründlich mit Unit-Tests getestet, um Zuverlässigkeit und Korrektheit sicherzustellen. Die Designentscheidungen und Implementierungsschritte sind dokumentiert, um ein klares Verständnis des Entwicklungsprozesses des Projekts zu vermitteln.
 
