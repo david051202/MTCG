@@ -9,5 +9,21 @@ namespace MTCG.Classes
         public double Damage { get; set; }
         public string ElementType { get; set; }
         public string CardType { get; set; }
+
+        public Deck Deck
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
+        public Package Package
+        {
+            get => default;
+            set
+            {
+            }
+        }
     }
 }

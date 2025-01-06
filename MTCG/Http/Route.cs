@@ -15,6 +15,14 @@ namespace MTCG.Http
         public string HttpMethod { get; set; }
         public Func<RequestContext, Dictionary<string, string>, Task<HttpResponse>> Action { get; set; }
 
+        public HttpServer HttpServer
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
         public bool IsMatch(string requestPath, out Dictionary<string, string> parameters)
         {
             parameters = new Dictionary<string, string>();

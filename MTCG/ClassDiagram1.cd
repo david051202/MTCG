@@ -1,7 +1,87 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="MTCG.Classes.BattleLogic">
+    <Position X="3" Y="0.5" Width="1.5" />
+    <NestedTypes>
+      <Class Name="MTCG.Classes.BattleLogic.BattleOutcome" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Battle\BattleLogic.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Class>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>oAAAAAIAggIEAACAAEAAEAAAAABEAAiAAAAAAEAAAQE=</HashCode>
+      <FileName>Battle\BattleLogic.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="BattleManager" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Classes.DatabaseHelper">
+    <Position X="14" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AABBAAAAAAAAAAgAEAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>DB\DatabaseHelper.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="User" />
+      <Property Name="Card" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Classes.Card">
+    <Position X="16.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACBACAAAAAAAAAAAAQAAQAAAgAAAAAAABAAAAAAAA=</HashCode>
+      <FileName>Models\Card.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Deck" />
+      <Property Name="Package" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Classes.Deck">
+    <Position X="19" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAACAgIAAAEAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Models\Deck.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MTCG.Classes.Package">
+    <Position X="16.75" Y="2.75" Width="1.5" />
+    <NestedTypes>
+      <Enum Name="MTCG.Classes.Package.BuyResult" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Models\Package.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Enum>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAABAAA=</HashCode>
+      <FileName>Models\Package.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MTCG.Classes.UserManager">
+    <Position X="19.25" Y="7.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABAAAAQAAQAAAABAEAAAAAABABEBAAAAAABAAAAAA=</HashCode>
+      <FileName>Models\UserManager.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="User" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Battle.BattleManager">
+    <Position X="3" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAEAAAAAAIIAEAAAEACAAEAAAAIAAAAQAAAAEAAAAA=</HashCode>
+      <FileName>Battle\BattleManager.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Route" />
+    </ShowAsAssociation>
+  </Class>
   <Class Name="MTCG.Http.HttpClient">
-    <Position X="20.5" Y="1.5" Width="1.5" />
+    <Position X="8.75" Y="0.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAABAAAAAAgAABAAAAAAgACAAAA=</HashCode>
       <FileName>Http\HttpClient.cs</FileName>
@@ -11,7 +91,7 @@
     </ShowAsAssociation>
   </Class>
   <Class Name="MTCG.Http.HttpMethod">
-    <Position X="20.5" Y="4.25" Width="1.5" />
+    <Position X="8.75" Y="3.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAgAAAAAA=</HashCode>
       <FileName>Http\HttpMethod.cs</FileName>
@@ -21,7 +101,7 @@
     </ShowAsAssociation>
   </Class>
   <Class Name="MTCG.Http.HttpResponse">
-    <Position X="18.25" Y="4.25" Width="1.5" />
+    <Position X="6.25" Y="3.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAEAAABAAAACAAAAAAAIAAAAAAAAAA=</HashCode>
       <FileName>Http\HttpResponse.cs</FileName>
@@ -31,54 +111,84 @@
     </ShowAsAssociation>
   </Class>
   <Class Name="MTCG.Http.HttpServer">
-    <Position X="23" Y="1.5" Width="1.5" />
+    <Position X="12" Y="0.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAQAACAAAAAAAAAAAAAAAAAAAAIQAAQAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAQAACCAAAAAAAAAAAAAAAAAAEIQAAQAAAAAA=</HashCode>
       <FileName>Http\HttpServer.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MTCG.Http.RequestContext">
-    <Position X="17.25" Y="1.5" Width="1.5" />
+    <Position X="5.75" Y="0.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAIAAIABAAAACAAAAAAAAAAAAAQBAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAAQAIAAIABAAAACAAAAAAAAAAAAAQBAAA=</HashCode>
       <FileName>Http\RequestContext.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
       <Property Name="HttpClient" />
     </ShowAsAssociation>
   </Class>
-  <Class Name="MTCG.Classes.Cards">
-    <Position X="25.75" Y="1.5" Width="1.5" />
+  <Class Name="MTCG.Http.Route">
+    <Position X="9.5" Y="7" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAABBACAAAAAAAAAAAAAAAQAAAAAAAAEAAAAAAAAAAA=</HashCode>
-      <FileName>Models\Cards.cs</FileName>
-    </TypeIdentifier>
-    <ShowAsAssociation>
-      <Property Name="User" />
-    </ShowAsAssociation>
-  </Class>
-  <Class Name="MTCG.Classes.User">
-    <Position X="25.75" Y="4.25" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>IAAAAAAAAQAQwAAAAQAACAAIAAAAAAACAAAYgAABAAA=</HashCode>
-      <FileName>Models\User.cs</FileName>
+      <HashCode>CAACAAAAAEAAAEIAAIAAAAAAAAAAAAAAAQAAgAAAAAQ=</HashCode>
+      <FileName>Http\Route.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
       <Property Name="HttpServer" />
     </ShowAsAssociation>
   </Class>
+  <Class Name="MTCG.Models.ScoreboardEntry">
+    <Position X="12" Y="8.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAQAAgAAAAAUAAAAAAAAAAAAAgAAAIAAAAAAA=</HashCode>
+      <FileName>Models\ScoreboardEntry.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Route" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Models.TradingDeal">
+    <Position X="12" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAQCCAAAAAEAAAAoBAAAAACIAAQAAAAAAIAA=</HashCode>
+      <FileName>Models\TradingDeal.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Route" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Models.User">
+    <Position X="14" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ABAAIAAAAUAQAAQACQEACA4IABAAEBACIABYAAAJAAA=</HashCode>
+      <FileName>Models\User.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Deck" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MTCG.Models.UserStats">
+    <Position X="19.25" Y="4.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABIAAAUAAgAAAAAEAAAAgAAAAAAAAgAAAIAQAAAAA=</HashCode>
+      <FileName>Models\UserStats.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="User" />
+    </ShowAsAssociation>
+  </Class>
   <Enum Name="MTCG.Http.HttpMethods">
-    <Position X="20.5" Y="5.5" Width="1.5" />
+    <Position X="8.75" Y="4.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAIAAAAAAAEAQAAAAAAAAAAAAAgAAAAAEAAAAAAAAA=</HashCode>
       <FileName>Http\HttpMethod.cs</FileName>
     </TypeIdentifier>
   </Enum>
   <Enum Name="MTCG.Http.StatusCodes">
-    <Position X="18.25" Y="6.25" Width="1.5" />
+    <Position X="6.25" Y="5.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>CAEAAAAIAAAAAAAgAAEAAAAAAAEAAAQAACAhAAAAAAA=</HashCode>
-      <FileName>Http\HttpResponse.cs</FileName>
+      <HashCode>CAEAQAAIAAAAAAAgAAEAAAAAAAEAAAQAACABAAAEAAA=</HashCode>
+      <FileName>Http\StatusCode.cs</FileName>
     </TypeIdentifier>
   </Enum>
   <Font Name="Segoe UI" Size="9" />

@@ -287,5 +287,13 @@ namespace MTCG.Classes
             public User Loser { get; set; }
             public string Log { get; set; }
         }
+
+        public Battle.BattleManager BattleManager
+        {
+            get => default;
+            set
+            {
+            }
+        }
     }
 }

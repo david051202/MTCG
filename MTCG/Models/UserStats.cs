@@ -13,6 +13,14 @@ namespace MTCG.Models
         public int Draws { get; set; }
         public int GamesPlayed { get; set; }
 
+        public User User
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
         public static UserStats GetStatsByUserId(int userId)
         {
             try

@@ -13,5 +13,13 @@ namespace MTCG.Models
         public int Wins { get; set; }
         public int Losses { get; set; }
         public int Draws { get; set; }
+
+        public Http.Route Route
+        {
+            get => default;
+            set
+            {
+            }
+        }
     }
 }

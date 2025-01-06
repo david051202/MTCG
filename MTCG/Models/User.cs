@@ -19,6 +19,14 @@ namespace MTCG.Models
         public List<Card> Cards { get; set; }
         public UserStats Stats { get; set; }
 
+        public Deck Deck
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
         public User()
         {
             Cards = new List<Card>();

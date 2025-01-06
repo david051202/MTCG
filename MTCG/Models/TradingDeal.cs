@@ -13,6 +13,14 @@ namespace MTCG.Models
         public double MinimumDamage { get; set; }
         public int UserId { get; set; } // Add UserId to track the owner of the deal
 
+        public Http.Route Route
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
         public static List<TradingDeal> GetAllTradingDeals()
         {
             var tradingDeals = new List<TradingDeal>();

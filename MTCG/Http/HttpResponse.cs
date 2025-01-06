@@ -7,6 +7,14 @@ namespace MTCG.Http
         public StatusCodes StatusCode { get; set; }
         public string Body { get; set; }
 
+        public HttpClient HttpClient
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
         public override string ToString()
         {
             var response = new StringBuilder();

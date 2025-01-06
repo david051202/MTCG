@@ -8,6 +8,13 @@ namespace MTCG.Http
 {
     public static class HttpMethod
     {
+        public static HttpServer HttpServer
+        {
+            get => default;
+            set
+            {
+            }
+        }
 
         public static HttpMethods GetHttpMethod(string method)
         {

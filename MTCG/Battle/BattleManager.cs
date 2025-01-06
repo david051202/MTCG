@@ -135,5 +135,13 @@ namespace MTCG.Battle
             }
             return null;
         }
+
+        public Http.Route Route
+        {
+            get => default;
+            set
+            {
+            }
+        }
     }
 }

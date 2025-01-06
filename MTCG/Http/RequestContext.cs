@@ -12,6 +12,14 @@ namespace MTCG.Http
         public string Body { get; set; }
         public Dictionary<string, string> Headers { get; set; }
 
+        public HttpClient HttpClient
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
         // Vorhandener Standardkonstruktor
         public RequestContext()
         {

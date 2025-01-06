@@ -10,6 +10,14 @@ namespace MTCG.Classes
         private static readonly ConcurrentDictionary<int, User> _usersById = new ConcurrentDictionary<int, User>();
         private static readonly ConcurrentDictionary<string, User> _usersByToken = new ConcurrentDictionary<string, User>();
 
+        public static User User
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
         /// <summary>
         /// Retrieves a user by their token. Utilizes caching for consistency.
         /// </summary>
